@@ -1,0 +1,51 @@
+{% extends "_primary.html" %}
+
+{% block content %}
+<div class="govuk-breadcrumbs">
+  <ol class="govuk-breadcrumbs__list">
+    <li class="govuk-breadcrumbs__list-item">
+      <a class="govuk-breadcrumbs__link" href="/">Single Sign-On</a>
+    </li>
+    <li class="govuk-breadcrumbs__list-item" aria-current="page">Dashboard</li>
+  </ol>
+</div>
+
+<main class="govuk-main-wrapper govuk-body " id="main-content" role="main">
+  <h2 class="govuk-heading-l">Dashboard</h2>
+
+  <div>
+    <p>
+      You are signed in as <strong>{{ display_name if display_name else email if email else '' }}</strong>.
+    </p>
+    <p>
+      You can <a href="/profile">view and edit your profile here</a>, where you can change your display name and add a mobile number for multifactor authentication.
+    </p>
+  </div>
+  <p>&nbsp;</p>
+
+  <h2 class="govuk-heading-l">Applications</h2>
+  <div>
+  {%- if allowed_apps %}
+    {%- for a in allowed_apps %}
+      {%- set app = allowed_apps[a] %}
+      {%- if app["name"] and app["sign_in_url"] %}
+      <div>
+        <h3 class="govuk-heading-m">{{ app["name"] }}</h3>
+        {%- if app["description"] %}
+        <p>
+          By signing in to security.gov.uk you can view restricted content, such as detailed travel advice.
+        </p>
+        {%- endif %}
+        <p>
+          <a href="{{ app['sign_in_url'] }}" role="button" draggable="false" class="govuk-button" data-module="govuk-button">{{ app["button_text"] }}</a>
+        </p>
+      </div>
+      {%- endif %}
+    {%- endfor %}
+  {%- else %}
+    <p>No applications available</p>
+  {%- endif %}
+  </div>
+
+</main>
+{% endblock %}

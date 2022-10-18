@@ -1,0 +1,10 @@
+**/.terraform/
+**/.terraform.*
+**/.env.secrets.*
+**/__pycache__
+**/node_modules/
+**/terraform/**/*.min.js
+**/package-lock.json
+.runtime/
+.target/
+*.zip

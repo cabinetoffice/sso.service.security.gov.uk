@@ -1,0 +1,64 @@
+{% extends "_primary.html" %}
+
+{% block content %}
+<div class="govuk-breadcrumbs">
+  <ol class="govuk-breadcrumbs__list">
+    <li class="govuk-breadcrumbs__list-item">
+      <a class="govuk-breadcrumbs__link" href="/">Single Sign-On</a>
+    </li>
+    <li class="govuk-breadcrumbs__list-item" aria-current="page">Sign in</li>
+  </ol>
+</div>
+
+<main class="govuk-main-wrapper " id="main-content" role="main">
+  <h2 class="govuk-heading-l">Sign in</h2>
+
+  {% if to_app_name %}
+  <div class="govuk-warning-text">
+    <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+    <strong class="govuk-warning-text__text">
+      <span class="govuk-warning-text__assistive">Note</span>
+      You're signing in to {{ to_app_name }}
+    </strong>
+  </div>
+  {% endif %}
+
+  <form action="{{ form_url }}" method="post">
+    <div class="govuk-form-group {{ 'govuk-form-group--error' if is_error else '' }}">
+      <label class="govuk-label" for="email">
+        Email address
+      </label>
+      <!--div id="email-hint" class="govuk-hint">
+        We’ll use this to direct you to your sign in provider
+      </div-->
+      {% if is_error %}
+      <p id="email-error" class="govuk-error-message">
+        <span class="govuk-visually-hidden">Error:</span> Email address wasn't recognised
+      </p>
+      {% endif %}
+      <!-- aria-describedby="email-hint" -->
+      <input class="govuk-input {{ 'govuk-input--error' if is_error else '' }}" id="email" name="email" type="email" spellcheck="false" autocomplete="email" value="{{ email_remember_me if email_remember_me else '' }}">
+    </div>
+
+    <div class="govuk-form-group">
+      <div class="govuk-checkboxes__item">
+        <input class="govuk-checkboxes__input" id="remember_me" name="remember_me" type="checkbox" value="true" {{ 'checked="checked"' if email_remember_me else '' }}>
+        <label class="govuk-label govuk-checkboxes__label" for="remember_me">
+          Remember me
+        </label>
+      </div>
+    </div>
+
+    <!--div class="govuk-body">
+      By continuing you agree to your IP, email and browser details being recorded
+    </div-->
+
+    <input type="hidden" id="csrf_form" name="csrf_form" value="{{ csrf_form }}">
+    <input type="submit" value="Continue" class="govuk-button" data-module="govuk-button"></input>
+    {% if cancel_href %}
+    <a href="{{ cancel_href }}" role="button" draggable="false" class="govuk-button govuk-button--secondary" data-module="govuk-button">Cancel</a>
+    {% endif %}
+  </form>
+
+</main>
+{% endblock %}

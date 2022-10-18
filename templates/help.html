@@ -1,0 +1,63 @@
+{% extends "_primary.html" %}
+
+{% block content %}
+<div class="govuk-breadcrumbs">
+  <ol class="govuk-breadcrumbs__list">
+    <li class="govuk-breadcrumbs__list-item">
+      <a class="govuk-breadcrumbs__link" href="/">Single Sign-On</a>
+    </li>
+    <li class="govuk-breadcrumbs__list-item" aria-current="page">Help</li>
+  </ol>
+</div>
+
+<main class="govuk-main-wrapper govuk-body " id="main-content" role="main">
+  <h2 class="govuk-heading-l">Help</h2>
+
+  <div>
+    <h3 id="dont-recognise-email-or-text" class="govuk-heading-m">Don't recognise an email or text message?</h3>
+    <p>
+      Please forward the unrecognised email to <a href="mailto:sso-service-securitygovuk-support@digital.cabinet-office.gov.uk">sso-service-securitygovuk-support@digital.cabinet-office.gov.uk</a>.
+    </p>
+  </div>
+  <p>&nbsp;</p>
+
+  <div>
+    <h3 id="how-do-i-change-my-password" class="govuk-heading-m">How do I change my password?</h3>
+    <p>
+      You do not need a password to sign in to <strong>{{ domain }}</strong>. Each time you sign in you will receive a code via your email, this saves you from having to remember another password and means your account is linked to your email.
+    </p>
+  </div>
+  <p>&nbsp;</p>
+
+  <div>
+    <h3 id="can-i-setup-mfa" class="govuk-heading-m">Can I setup MFA (Multi-Factor Authentication)?</h3>
+    <p>
+      Yes. At this time, only receiving an additional text message is supported, you can <a href="/profile">configure a text message number in your profile</a>.
+    </p>
+  </div>
+  <p>&nbsp;</p>
+
+  <div>
+    <h3 id="how-is-my-privacy-protected" class="govuk-heading-m">How is my privacy protected?</h3>
+    <p>
+      We only capture, store and process data that's required to run this service. You can find the <a href="/privacy-notice">privacy notice here</a>.
+    </p>
+  </div>
+  <p>&nbsp;</p>
+
+  <div>
+    <h3 id="are-there-any-terms-or-conditions-for-using-the-service" class="govuk-heading-m">Are there any terms or conditions for using the service?</h3>
+    <p>
+      The <a href="/terms">Terms of Service are available here</a>.
+    </p>
+  </div>
+  <p>&nbsp;</p>
+
+  <div>
+    <h3 id="more-support" class="govuk-heading-m">More support</h3>
+    <p>
+      You can email <a href="mailto:sso-service-securitygovuk-support@digital.cabinet-office.gov.uk">sso-service-securitygovuk-support@digital.cabinet-office.gov.uk</a> for support.
+    </p>
+  </div>
+</main>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "_primary.html" %}
+
+{% block content %}
+<div class="govuk-breadcrumbs">
+  <ol class="govuk-breadcrumbs__list">
+    <li class="govuk-breadcrumbs__list-item">
+      <a class="govuk-breadcrumbs__link" href="/">Single Sign-On</a>
+    </li>
+    <li class="govuk-breadcrumbs__list-item">
+      <a class="govuk-breadcrumbs__link" href="/sign-in">Sign in</a>
+    </li>
+    <li class="govuk-breadcrumbs__list-item" aria-current="page">Code</li>
+  </ol>
+</div>
+
+<main class="govuk-main-wrapper " id="main-content" role="main">
+  <h2 class="govuk-heading-l">Authentication Code</h2>
+
+  {% if to_app_name %}
+  <div class="govuk-warning-text">
+    <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+    <strong class="govuk-warning-text__text">
+      <span class="govuk-warning-text__assistive">Note</span>
+      You're signing in to {{ to_app_name }}
+    </strong>
+  </div>
+  {% endif %}
+
+  <form action="{{ form_url }}" method="post">
+    <div class="govuk-form-group {{ 'govuk-form-group--error' if code_fail else '' }}">
+      <label class="govuk-label" for="code">
+        Check your {{ code_type }} for the authentication code
+      </label>
+      {% if code_fail %}
+      <p id="code-error" class="govuk-error-message">
+        <span class="govuk-visually-hidden">Error:</span> Code wasn't recognised
+      </p>
+      {% endif %}
+      <input class="govuk-input govuk-input--width-10 {{ 'govuk-input--error' if code_fail else '' }}" id="code" name="code" type="code" pattern="[0-9a-z\-]*" placeholder="abc-def-hij" spellcheck="false" autocomplete="off">
+    </div>
+
+    <input type="hidden" id="csrf_form" name="csrf_form" value="{{ csrf_form }}">
+    <input type="hidden" id="code_type" name="code_type" value="{{ code_type }}">
+    <input type="submit" value="Continue" class="govuk-button" data-module="govuk-button"></input>
+  </form>
+
+</main>
+{% endblock %}

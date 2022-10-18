@@ -1,0 +1,21 @@
+{% extends "_primary.html" %}
+
+{% block content %}
+<div class="govuk-breadcrumbs">
+  <ol class="govuk-breadcrumbs__list">
+    <li class="govuk-breadcrumbs__list-item">
+      <a class="govuk-breadcrumbs__link" href="/">Single Sign-On</a>
+    </li>
+    <li class="govuk-breadcrumbs__list-item" aria-current="page">Error</li>
+  </ol>
+</div>
+
+<main class="govuk-main-wrapper govuk-body " id="main-content" role="main">
+  <h2 class="govuk-heading-l">Error</h2>
+
+  <div>
+    <p>Something went wrong, you can {% if endpoint and not endpoint.startswith('/error') %} try <a href="{{ endpoint }}">clicking here to try again</a> or {% endif %}<a href="/">click here to go home</a>.</p>
+  </div>
+
+</main>
+{% endblock %}

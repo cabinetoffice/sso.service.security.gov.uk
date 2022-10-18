@@ -1,0 +1,51 @@
+@media (min-width: 48.0625em) {
+  .govuk-header__logo {
+    width: 58%;
+  }
+  .govuk-header__content {
+    width: 42%;
+  }
+}
+
+.red_phase {
+  background: red !important;
+}
+
+.govuk-header__container {
+  margin-bottom: -9px;
+}
+
+.govuk-header__menu-button {
+  position: relative;
+  top: auto;
+  right: auto;
+  margin-bottom: 0.5em;
+  padding: auto;
+}
+
+span.govuk-header__logotype-text {
+    font-size: 26px;
+}
+
+hr {
+  margin-top: 2em;
+}
+
+.govuk-header__logo {
+  padding-right: 0;
+}
+
+strong.phase-nonprod {
+  background: #df0606;
+}
+
+code {
+  background: #efefef;
+  border: #efefef;
+  border-radius: 0.3em;
+  padding: 0 0.2em;
+}
+
+.back-button {
+  margin-top: 2em;
+}

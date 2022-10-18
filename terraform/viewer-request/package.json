@@ -1,0 +1,28 @@
+{
+  "devDependencies": {
+    "chai": "^4.3.4",
+    "minify": "^9.1.0",
+    "mocha": "^8.3.2"
+  },
+  "scripts": {
+    "test": "minify index.js > index.min.js && mocha --reporter spec 'test_*.js'",
+    "minify": "minify index.js > index.min.js"
+  },
+  "name": "index",
+  "version": "1.0.0",
+  "main": "index.js",
+  "directories": {
+    "test": "."
+  },
+  "author": "OllieJC",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cabinetoffice/sso.service.security.gov.uk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cabinetoffice/sso.service.security.gov.uk/issues"
+  },
+  "homepage": "https://github.com/cabinetoffice/sso.service.security.gov.uk",
+  "description": ""
+}

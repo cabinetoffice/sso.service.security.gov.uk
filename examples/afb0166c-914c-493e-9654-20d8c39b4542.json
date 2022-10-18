@@ -1,0 +1,14 @@
+{
+  "afb0166c-914c-493e-9654-20d8c39b4542": {
+    "name": "security.gov.uk (LOCALHOST)",
+    "description": "By signing in to LOCALHOST you can...",
+    "secret": "ssosecgovuk-4f5758aa6de1424686968-4523c7516010449c8a8c468a0f990c",
+    "redirect_urls": ["http://localhost:5000/api/auth/oidc_callback"],
+    "sign_in_url": "http://localhost:5000/signed-in",
+    "app_url": "http://localhost:5000/",
+    "allowed_domains": ["*.gov.uk"],
+    "allowed_emails": [],
+    "blocked_domains": [],
+    "blocked_emails": []
+  }
+}

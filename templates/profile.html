@@ -1,0 +1,68 @@
+{% extends "_primary.html" %}
+
+{% block content %}
+<div class="govuk-breadcrumbs">
+  <ol class="govuk-breadcrumbs__list">
+    <li class="govuk-breadcrumbs__list-item">
+      <a class="govuk-breadcrumbs__link" href="/">Single Sign-On</a>
+    </li>
+    <li class="govuk-breadcrumbs__list-item" aria-current="page">Profile</li>
+  </ol>
+</div>
+
+<main class="govuk-main-wrapper govuk-body " id="main-content" role="main">
+  <h2 class="govuk-heading-l">Profile</h2>
+
+  <!--div>
+    <h2 class="govuk-label-wrapper">Sign in information</h2>
+    <p>Your profile is linked via email authentication with {{ email }}.</p>
+  </div>
+  <hr>
+  <p>&nbsp;</p-->
+
+  <div>
+    <form method="post">
+      <input type="hidden" id="csrf_form" name="csrf_form" value="{{ csrf_form }}" />
+
+      <div class="govuk-form-group">
+        <h2 class="govuk-label-wrapper">
+          <label class="govuk-label govuk-label--m" for="email">Email</label>
+        </h2>
+        <div id="email-hint" class="govuk-hint">
+          Your email cannot be changed.
+        </div>
+        <input class="govuk-input" id="email" aria-describedby="email-hint" disabled="disabled" name="email" type="text" value="{{ email if email else '' }}" autocomplete="off">
+      </div>
+      <p>&nbsp;</p>
+
+      <div class="govuk-form-group">
+        <h2 class="govuk-label-wrapper">
+          <label class="govuk-label govuk-label--m" for="display-name">Display Name</label>
+        </h2>
+        <div id="display-name-hint" class="govuk-hint">
+          Your display name will be used in notifications, when displaying who is signed in and shared with applications you use.
+        </div>
+        <input class="govuk-input" id="display-name" aria-describedby="display-name-hint" spellcheck="false" name="display-name" type="text" value="{{ display_name if display_name else '' }}">
+      </div>
+      <p>&nbsp;</p>
+
+      <div class="govuk-form-group">
+        <h2 class="govuk-label-wrapper">
+          <label class="govuk-label govuk-label--m" for="sms-number">Text Message Number</label>
+        </h2>
+        <div id="sms-number-hint" class="govuk-hint">
+          Your number that you can receive text messages on - this will be used for notifications and MFA (Multi-Factor Authentication) and will not be shared with applications you use.
+        </div>
+        <input class="govuk-input" id="sms-number" aria-describedby="sms-number-hint" name="sms-number" type="text" value="{{ sms_number if sms_number else '' }}">
+      </div>
+      <p>&nbsp;</p>
+
+      <div class="govuk-button-group">
+        <button class="govuk-button" data-module="govuk-button" type="submit">Save</button>
+        <a href="/profile" role="button" draggable="false" class="govuk-button govuk-button--secondary" data-module="govuk-button">Cancel</a>
+      </div>
+    </form>
+  </div>
+
+</main>
+{% endblock %}
