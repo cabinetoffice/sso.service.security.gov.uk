@@ -2,6 +2,7 @@ import hashlib
 import secrets
 import time
 import json
+import jwt_signing
 
 from sso_data_access import read_file, write_file, delete_file, read_all_files
 from sso_utils import jprint, env_var
@@ -12,6 +13,11 @@ SUB_EMAIL_SALT = env_var("SUB_EMAIL_SALT")
 AUTH_CODE_TIMEOUT = int(env_var("AUTH_CODE_TIMEOUT"))
 ACCESS_CODE_TIMEOUT = int(env_var("ACCESS_CODE_TIMEOUT"))
 
+CURRENT_SIGNING_KID = env_var("CURRENT_SIGNING_KID")
+
+IS_HTTPS = env_var("IS_HTTPS", "f", return_bool=True)
+DOMAIN = env_var("DOMAIN")
+URL_PREFIX = f"http{'s' if IS_HTTPS else ''}://{DOMAIN}"
 
 def get_clients() -> dict:
     res = {}
@@ -50,6 +56,8 @@ def get_user_by_auth_code(client_id: str, client_secret: str, auth_code: str) ->
                     ):
                         res = gus
                         res["scopes"] = jac["scopes"] if "scopes" in jac else ["openid"]
+                        res["pf_quality"] = jac["pf_quality"] if "pf_quality" in jac else None
+                        res["mfa_quality"] = jac["mfa_quality"] if "mfa_quality" in jac else None
         except Exception as e:
             jprint("get_user_by_auth_code:", e)
 
@@ -91,13 +99,63 @@ def get_available_scopes() -> list:
     ]
 
 
-def create_auth_code(client_id: str, sub: str, raw_scope: str = None) -> str:
+def generate_id_token(client_id: str, user: dict, scopes: list = ["openid"], pf_quality: str = None, mfa_quality: str = None):
+    id_token = None
+
+    expiry = 3600
+    time_now = int(time.time())
+    exp_time = time_now + expiry
+
+    sub = user["sub"]
+    email = user["email"]
+
+    mfa_quality = None
+    if sign_in_type:
+        if "sms" in sign_in_type:
+            mfa_quality = "medium"
+
+    payload = {
+        "iss": URL_PREFIX,
+        "iat": time_now,
+        "exp": exp_time,
+        "aud": client_id,
+        "sub": sub,
+        "pf_quality": pf_quality,
+        "mfa_quality": mfa_quality
+    }
+
+    # mfa quality: none, low, medium, high
+    # https://www.gov.uk/government/publications/authentication-credentials-for-online-government-services/giving-users-access-to-online-services
+
+    if "email" in scopes:
+        payload["email"] = email
+        payload["email_verified"] = True
+
+    if "nonce" in user:
+        payload["nonce"] = user["nonce"]
+
+    if "profile" in scopes:
+        dn = None
+        if "attributes" in user and "display_name" in user["attributes"]:
+            dn = user["attributes"]["display_name"]
+        payload["display_name"] = dn
+        payload["nickname"] = dn
+
+    id_token = jwt_signing.sign(payload, kid=CURRENT_SIGNING_KID)
+
+    return id_token
+
+
+def sanitise_scopes(raw_scope: str = None) -> list:
     scopes = []
     raw_scopes = raw_scope.lower().split(" ")
     for s in get_available_scopes():
         if s in raw_scopes:
             scopes.append(s)
+    return scopes
 
+
+def create_auth_code(client_id: str, sub: str, scopes: list = [], pf_quality: str = None, mfa_quality: str = None) -> str:
     gus = get_user_sub(sub=sub)
     clients = get_clients()
     if client_id in clients and "email" in gus:
@@ -111,7 +169,7 @@ def create_auth_code(client_id: str, sub: str, raw_scope: str = None) -> str:
 
             write_file(
                 f"auth_codes/{auth_code}.json",
-                json.dumps({"sub": sub, "write_time": time.time(), "scopes": scopes}),
+                json.dumps({"sub": sub, "write_time": time.time(), "scopes": scopes, "pf_quality": pf_quality, "mfa_quality": mfa_quality}),
             )
             return auth_code
         except Exception as e:
@@ -136,6 +194,9 @@ def get_user_by_access_code(access_code: str) -> dict:
                     and jac["write_time"] >= (time.time() - ACCESS_CODE_TIMEOUT)
                 ):
                     res = gus
+                    res["scopes"] = jac["scopes"] if "scopes" in jac else ["openid"]
+                    res["pf_quality"] = jac["pf_quality"] if "pf_quality" in jac else None
+                    res["mfa_quality"] = jac["mfa_quality"] if "mfa_quality" in jac else None
     except Exception as e:
         jprint("get_user_by_access_code:", e)
 
@@ -167,7 +228,7 @@ def delete_access_code(access_code: str) -> bool:
     return res
 
 
-def create_access_code(sub: str) -> str:
+def create_access_code(sub: str, scopes: list = [], pf_quality: str = None, mfa_quality: str = None) -> str:
     gus = get_user_sub(sub=sub)
     if "email" in gus:
         try:
@@ -181,7 +242,7 @@ def create_access_code(sub: str) -> str:
 
             write_file(
                 f"access_codes/{access_code}.json",
-                json.dumps({"sub": sub, "write_time": time.time()}),
+                json.dumps({"sub": sub, "write_time": time.time(), "scopes": scopes, "pf_quality": pf_quality, "mfa_quality": mfa_quality}),
             )
 
             return access_code

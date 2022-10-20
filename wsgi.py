@@ -129,12 +129,12 @@ def oidc_config():
         "jwks_uri": f"{URL_PREFIX}/.well-known/jwks.json",
         "response_types_supported": [
             "code",
-            # "token",
-            # "id_token",
-            # "code token",
-            # "code id_token",
-            # "token id_token",
-            # "code token id_token",
+            "token",
+            "id_token",
+            "code token",
+            "code id_token",
+            "token id_token",
+            "code token id_token",
             # "none",
         ],
         "subject_types_supported": ["public"],
@@ -155,9 +155,14 @@ def oidc_config():
             "sub",
             "display_name",
             "nickname",
+            "pf_quality",
+            "mfa_quality",
         ],
         "code_challenge_methods_supported": ["plain"],
-        "grant_types_supported": ["authorization_code"],
+        "grant_types_supported": [
+            "implicit",
+            "authorization_code"
+        ],
     }
     return jsonify(discovery)
 
@@ -202,39 +207,18 @@ def auth_token():
         )
         return returnError(401)
 
-    expiry = 3600
-    time_now = int(time.time())
-    exp_time = time_now + expiry
+    id_token = sso_oidc.generate_id_token(client_id, gubac, gubac["scopes"], session["pf_quality"], gubac["mfa_quality"])
+    if id_token is None or not id_token:
+        jprint(
+            {
+                "path": "/auth/token",
+                "method": request.method,
+                "error": "auth_token: id_token invalid, returning 401",
+            }
+        )
+        return returnError(401)
 
-    sub = gubac["sub"]
-    email = gubac["email"]
-    scopes = gubac["scopes"]
-
-    payload = {
-        "iss": URL_PREFIX,
-        "iat": time_now,
-        "exp": exp_time,
-        "aud": client_id,
-        "sub": sub,
-    }
-
-    if "email" in scopes:
-        payload["email"] = email
-        payload["email_verified"] = True
-
-    if "nonce" in gubac:
-        payload["nonce"] = gubac["nonce"]
-
-    if "profile" in scopes:
-        dn = None
-        if "attributes" in gubac and "display_name" in gubac["attributes"]:
-            dn = gubac["attributes"]["display_name"]
-        payload["display_name"] = dn
-        payload["nickname"] = dn
-
-    id_token = jwt_signing.sign(payload, kid=CURRENT_SIGNING_KID)
-
-    access_token = sso_oidc.create_access_code(sub)
+    access_token = sso_oidc.create_access_code(sub, gubac["scopes"], session["pf_quality"], gubac["mfa_quality"])
     if access_token is None or not access_token:
         jprint(
             {
@@ -264,34 +248,31 @@ def auth_profile():
         authorization = request.headers["Authorization"].split(" ")[1]
     elif "authorization" in request.values:
         authorization = request.values["authorization"]
+    elif "token" in request.values:
+        authorization = request.values["token"]
     elif "id_token" in request.values:
         id_token = request.values["id_token"]
 
     user_info = {
         "sub": None,
-        "email": None,
-        "email_verified": False,
-        "display_name": None,
-        "nickname": None,
     }
 
     if authorization:
         gus = sso_oidc.get_user_by_access_code(authorization)
 
-        if "email" in gus:
+        if "email" in gus["scopes"] and "email" in gus:
             user_info["email"] = gus["email"]
             user_info["email_verified"] = True
 
+        if "profile" in gus["scopes"]:
+            dn = None
+            if "attributes" in gus and "display_name" in gus["attributes"]:
+                dn = gus["attributes"]["display_name"]
+            user_info["display_name"] = dn
+            user_info["nickname"] = dn
+
         if "sub" in gus:
             user_info["sub"] = gus["sub"]
-
-        dn = None
-
-        if "attributes" in gus and "display_name" in gus["attributes"]:
-            dn = gus["attributes"]["display_name"]
-
-        user_info["display_name"] = dn
-        user_info["nickname"] = dn
 
     jprint({"path": "/auth/profile", "method": request.method, "user_info": user_info})
 
@@ -302,6 +283,35 @@ def auth_profile():
 def auth_oidc():
     tmp_client_id = None
     tmp_redirect_url = None
+    tmp_response_types = None
+    tmp_response_mode = None
+
+    tmp_is_code = False
+    tmp_is_token = False
+    tmp_is_id_token = False
+
+    if "response_type" in request.values:
+        tmp_response_types = request.values.get("response_type").lower()
+    elif "oidc_response_types" in session:
+        tmp_response_types = session["oidc_response_types"]
+
+    if tmp_response_types:
+        if "code" in tmp_response_types:
+            tmp_is_code = True
+        if "id_token" in tmp_response_types:
+            tmp_is_id_token = True
+        if re.search(r"(?<!id_)token", tmp_response_types):
+            tmp_is_token = True
+
+    if not tmp_is_code and not tmp_is_token and not tmp_is_id_token:
+        return set_browser_cookie(redirect("/error?type=response_type-not-set"))
+
+    if "response_mode" in request.values:
+        tmp_response_mode = request.values.get("response_mode").lower()
+    elif "oidc_response_mode" in session:
+        tmp_response_mode = session["oidc_response_mode"]
+
+    tmp_form_resp = tmp_response_mode == "form_post"
 
     if "client_id" in request.values:
         tmp_client_id = request.values.get("client_id")
@@ -342,13 +352,16 @@ def auth_oidc():
 
         session["oidc_redirect_uri"] = tmp_redirect_url
         session["oidc_client_id"] = tmp_client_id
+        session["oidc_response_mode"] = tmp_response_mode
+        session["oidc_response_types"] = tmp_response_types
 
     tmp_scope = None
     if "scope" in request.values:
         tmp_scope = request.values.get("scope")
-        session["oidc_scope"] = tmp_scope
     elif "oidc_scope" in session:
         tmp_scope = session["oidc_scope"]
+
+    session["oidc_scope"] = sso_oidc.sanitise_scopes(tmp_scope)
 
     if "state" in request.values:
         session["oidc_state"] = request.values.get("state")
@@ -367,21 +380,39 @@ def auth_oidc():
     )
 
     if "signed_in" in session and session["signed_in"] and "sub" in session:
-        auth_code = sso_oidc.create_auth_code(tmp_client_id, session["sub"], tmp_scope)
-        if auth_code:
-            redirect_string = tmp_redirect_url
-            redirect_string += "?" if "?" not in tmp_redirect_url else "&"
-            redirect_string += f"code={auth_code}"
-            if "oidc_state" in session:
-                redirect_string += f"&state={session['oidc_state']}"
-                session.pop("oidc_state", None)
+        auth_code = None
+        if tmp_is_code:
+            auth_code = sso_oidc.create_auth_code(tmp_client_id, session["sub"], session["oidc_scope"], session["pf_quality"], session["mfa_quality"])
 
-            session.pop("oidc_client_id", None)
-            session.pop("oidc_redirect_uri", None)
-            session.pop("oidc_nonce", None)
-            session.pop("oidc_scope", None)
-        else:
-            redirect_string = f"/error?type=creating-auth-code-failure"
+        access_token = None
+        if tmp_is_token:
+            access_token = sso_oidc.create_access_code(session["sub"], session["oidc_scope"], session["pf_quality"], session["mfa_quality"])
+
+        id_token = None
+        if tmp_is_id_token:
+            gus = get_user_sub(sub=session["sub"])
+            id_token = sso_oidc.generate_id_token(tmp_client_id, gus, session["oidc_scope"], session["pf_quality"], session["mfa_quality"])
+
+        redirect_string = tmp_redirect_url
+        redirect_string += "?" if "?" not in tmp_redirect_url else "&"
+
+        if auth_code:
+            redirect_string += f"code={auth_code}&"
+        if access_token:
+            redirect_string += f"token={access_token}&"
+        if id_token:
+            redirect_string += f"id_token={id_token}&"
+
+        if "oidc_state" in session:
+            redirect_string += f"state={session['oidc_state']}"
+            session.pop("oidc_state", None)
+
+        session.pop("oidc_client_id", None)
+        session.pop("oidc_redirect_uri", None)
+        session.pop("oidc_response_mode", None)
+        session.pop("oidc_response_types", None)
+        session.pop("oidc_nonce", None)
+        session.pop("oidc_scope", None)
     elif tmp_client_id:
         redirect_string = f"/sign-in?to_app={tmp_client_id}"
 
@@ -814,6 +845,7 @@ def signin():
                         ):
                             session.pop("email-sign-in-complete")
                             session.pop("sms-sign-in-code")
+                            session["mfa_quality"] = "medium"
                             signed_in = True
                         else:
                             return redirect("/sign-in")
@@ -840,6 +872,8 @@ def signin():
                     else:
                         session.pop("email-sign-in-code")
                         session["email-sign-in-complete"] = True
+                        session["mfa_quality"] = None
+                        session["pf_quality"] = "medium" # TODO, "high" if Google/Microsoft
 
                         if not sms_auth_required:
                             signed_in = True
