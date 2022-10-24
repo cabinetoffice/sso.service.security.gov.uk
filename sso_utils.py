@@ -10,6 +10,23 @@ from base64 import b64decode
 
 file_variables = {**dotenv_values(".env.shared")}  # all environments variables
 
+redact_replacement = "REDACTED"
+redact_strings = []
+redact_prefixes = []
+
+
+def set_redacted(strings: list = [], prefixes: list = []):
+    global redact_strings
+    global redact_prefixes
+
+    for s in strings:
+        if s and s not in redact_strings:
+            redact_strings.append(s)
+
+    for p in prefixes:
+        if p and p not in redact_prefixes:
+            redact_prefixes.append(p)
+
 
 def env_var(env: str, default: str = None, return_bool: bool = False):
     res = default
@@ -27,6 +44,10 @@ def env_var(env: str, default: str = None, return_bool: bool = False):
 
 if env_var("ENVIRONMENT", "development") == "development":
     file_variables.update(dotenv_values(".env.secrets.test"))
+
+
+ENVIRONMENT = env_var("ENVIRONMENT", "development")
+IS_PROD = "production" == ENVIRONMENT.lower()
 
 
 def to_list(s: str, delimiter: str = ",", to_lower: bool = True) -> list:
@@ -127,6 +148,27 @@ def random_string(
     return res
 
 
+def redact_string(res):
+    if not res:
+        return ""
+
+    regex_finds = []
+    for p in redact_prefixes:
+        if p:
+            repr = re.compile(f"[\"'&\?\=]{p}[\"']?[:=]\s*[\"']?([a-zA-Z\-0-9]+)")
+            for rf in repr.findall(res):
+                if rf:
+                    regex_finds.append(rf)
+
+    to_redact = redact_strings + regex_finds
+
+    for s in to_redact:
+        if s in res:
+            res = res.replace(s, redact_replacement)
+
+    return res
+
+
 def jprint(d=None, *argv):
     try:
         if type(d) != dict:
@@ -146,4 +188,6 @@ def jprint(d=None, *argv):
     now = datetime.now()
     d = {"_datetime": now.strftime("%Y-%m-%dT%H:%M:%S.%f"), **d}
 
-    print(json.dumps(d, default=str))
+    res = redact_string(json.dumps(d, default=str))
+    print(res)
+    return res

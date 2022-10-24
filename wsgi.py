@@ -28,7 +28,7 @@ from notifications_python_client.notifications import NotificationsAPIClient
 from urllib.parse import parse_qs, unquote
 from jinja_helper import renderTemplate
 from sso_data_access import read_file, write_file
-from sso_utils import random_string, env_var, sanitise_string, jprint
+from sso_utils import random_string, env_var, sanitise_string, jprint, set_redacted
 from sso_email_check import valid_email
 from email_helper import email_parts
 from sso_ua import guess_browser
@@ -58,6 +58,8 @@ if ENVIRONMENT != "production":
     app.config["DEBUG"] = True
     app.testing = True
 
+FLASK_SECRET_KEY = env_var("FLASK_SECRET_KEY")
+
 app.config.update(
     ENV=ENVIRONMENT,
     SESSION_COOKIE_NAME=COOKIE_NAME_SESSION,
@@ -67,7 +69,7 @@ app.config.update(
     SESSION_COOKIE_SECURE=IS_HTTPS,
     SESSION_COOKIE_SAMESITE="Lax",
     PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
-    SECRET_KEY=env_var("FLASK_SECRET_KEY"),
+    SECRET_KEY=FLASK_SECRET_KEY,
     MAX_CONTENT_LENGTH=120 * 1024 * 1024,
 )
 
@@ -77,7 +79,24 @@ alb_lambda_handler = make_lambda_handler(app)
 DOMAIN = env_var("DOMAIN")
 URL_PREFIX = f"http{'s' if IS_HTTPS else ''}://{DOMAIN}"
 
-notifications_client = NotificationsAPIClient(env_var("NOTIFY_API_KEY"))
+NOTIFY_API_KEY = env_var("NOTIFY_API_KEY")
+notifications_client = NotificationsAPIClient(NOTIFY_API_KEY)
+
+if IS_PROD:
+    set_redacted(
+        strings=[NOTIFY_API_KEY, FLASK_SECRET_KEY],
+        prefixes=[
+            "client_secret",
+            "code",
+            "id_token",
+            "token",
+            "secret",
+            COOKIE_NAME_SESSION,
+            COOKIE_NAME_REMEMBERME,
+        ],
+    )
+else:
+    set_redacted(strings=[NOTIFY_API_KEY])
 
 
 def client_ip():
@@ -159,10 +178,7 @@ def oidc_config():
             "mfa_quality",
         ],
         "code_challenge_methods_supported": ["plain"],
-        "grant_types_supported": [
-            "implicit",
-            "authorization_code"
-        ],
+        "grant_types_supported": ["implicit", "authorization_code"],
     }
     return jsonify(discovery)
 
@@ -207,7 +223,17 @@ def auth_token():
         )
         return returnError(401)
 
-    id_token = sso_oidc.generate_id_token(client_id, gubac, gubac["scopes"], session["pf_quality"], gubac["mfa_quality"])
+    scopes = gubac["scopes"]
+
+    time_now = int(time.time())
+    id_token = sso_oidc.generate_id_token(
+        client_id,
+        gubac,
+        scopes,
+        gubac["pf_quality"],
+        gubac["mfa_quality"],
+        time_now,
+    )
     if id_token is None or not id_token:
         jprint(
             {
@@ -218,7 +244,9 @@ def auth_token():
         )
         return returnError(401)
 
-    access_token = sso_oidc.create_access_code(sub, gubac["scopes"], session["pf_quality"], gubac["mfa_quality"])
+    access_token = sso_oidc.create_access_code(
+        gubac["sub"], scopes, gubac["pf_quality"], gubac["mfa_quality"]
+    )
     if access_token is None or not access_token:
         jprint(
             {
@@ -277,6 +305,11 @@ def auth_profile():
     jprint({"path": "/auth/profile", "method": request.method, "user_info": user_info})
 
     return jsonify(user_info)
+
+
+@app.route("/auth/google_callback", methods=["GET", "POST"])
+def google_callback():
+    return False
 
 
 @app.route("/auth/oidc", methods=["GET", "POST"])
@@ -382,16 +415,33 @@ def auth_oidc():
     if "signed_in" in session and session["signed_in"] and "sub" in session:
         auth_code = None
         if tmp_is_code:
-            auth_code = sso_oidc.create_auth_code(tmp_client_id, session["sub"], session["oidc_scope"], session["pf_quality"], session["mfa_quality"])
+            auth_code = sso_oidc.create_auth_code(
+                tmp_client_id,
+                session["sub"],
+                session["oidc_scope"],
+                session["pf_quality"],
+                session["mfa_quality"],
+            )
 
         access_token = None
         if tmp_is_token:
-            access_token = sso_oidc.create_access_code(session["sub"], session["oidc_scope"], session["pf_quality"], session["mfa_quality"])
+            access_token = sso_oidc.create_access_code(
+                session["sub"],
+                session["oidc_scope"],
+                session["pf_quality"],
+                session["mfa_quality"],
+            )
 
         id_token = None
         if tmp_is_id_token:
-            gus = get_user_sub(sub=session["sub"])
-            id_token = sso_oidc.generate_id_token(tmp_client_id, gus, session["oidc_scope"], session["pf_quality"], session["mfa_quality"])
+            gus = sso_oidc.get_user_sub(sub=session["sub"])
+            id_token = sso_oidc.generate_id_token(
+                tmp_client_id,
+                gus,
+                session["oidc_scope"],
+                session["pf_quality"],
+                session["mfa_quality"],
+            )
 
         redirect_string = tmp_redirect_url
         redirect_string += "?" if "?" not in tmp_redirect_url else "&"
@@ -406,6 +456,8 @@ def auth_oidc():
         if "oidc_state" in session:
             redirect_string += f"state={session['oidc_state']}"
             session.pop("oidc_state", None)
+
+        redirect_string = redirect_string.strip("&")
 
         session.pop("oidc_client_id", None)
         session.pop("oidc_redirect_uri", None)
@@ -649,7 +701,7 @@ def add_remember_me_cookie(email: str, response):
     if email:
         response.set_cookie(
             COOKIE_NAME_REMEMBERME,
-            email,
+            email.strip('"').strip(),
             secure=IS_HTTPS,
             httponly=True,
             samesite="Lax",
@@ -755,39 +807,44 @@ def signin():
                         session["sms_auth_required"] = False
 
                     if USE_NOTIFY:
-                        response = notifications_client.send_email_notification(
-                            email_address=email["email"],
-                            template_id=env_var("NOTIFY_EMAIL_AUTH_CODE_TEMPLATE"),
-                            personalisation={
-                                "auth_code": pretty_code,
-                                "display_name": user_attributes["display_name"]
-                                if "display_name" in user_attributes
-                                and user_attributes["display_name"]
-                                else session["email"]["email"],
-                                "obfuscated_ip ": (
-                                    ".".join(c_ip.split(".")[:-1]) + ".*"
-                                )
-                                if "." in c_ip
-                                else (":".join(c_ip.split(":")[:-1]) + ":*")
-                                if ":" in c_ip
-                                else "Unknown",
-                                "country": request.headers[
-                                    "cloudfront-viewer-country-name"
-                                ]
-                                if "cloudfront-viewer-country-name" in request.headers
-                                else "Unknown",
-                                "domain": DOMAIN,
-                                "browser_guess": guess_browser(
-                                    request.headers["true-user-agent"]
-                                    if "true-user-agent" in request.headers
-                                    else (
-                                        request.headers["User-Agent"]
-                                        if "User-Agent" in request.headers
-                                        else ""
+                        try:
+                            response = notifications_client.send_email_notification(
+                                email_address=email["email"],
+                                template_id=env_var("NOTIFY_EMAIL_AUTH_CODE_TEMPLATE"),
+                                personalisation={
+                                    "auth_code": pretty_code,
+                                    "display_name": user_attributes["display_name"]
+                                    if "display_name" in user_attributes
+                                    and user_attributes["display_name"]
+                                    else session["email"]["email"],
+                                    "obfuscated_ip ": (
+                                        ".".join(c_ip.split(".")[:-1]) + ".*"
                                     )
-                                ),
-                            },
-                        )
+                                    if "." in c_ip
+                                    else (":".join(c_ip.split(":")[:-1]) + ":*")
+                                    if ":" in c_ip
+                                    else "Unknown",
+                                    "country": request.headers[
+                                        "cloudfront-viewer-country-name"
+                                    ]
+                                    if "cloudfront-viewer-country-name"
+                                    in request.headers
+                                    else "Unknown",
+                                    "domain": DOMAIN,
+                                    "browser_guess": guess_browser(
+                                        request.headers["true-user-agent"]
+                                        if "true-user-agent" in request.headers
+                                        else (
+                                            request.headers["User-Agent"]
+                                            if "User-Agent" in request.headers
+                                            else ""
+                                        )
+                                    ),
+                                },
+                            )
+                        except Exception as e:
+                            jprint({"error": e, "Error": traceback.format_exc()})
+                            return returnError(500)
 
                     session["email-sign-in-code"] = code
 
@@ -873,7 +930,9 @@ def signin():
                         session.pop("email-sign-in-code")
                         session["email-sign-in-complete"] = True
                         session["mfa_quality"] = None
-                        session["pf_quality"] = "medium" # TODO, "high" if Google/Microsoft
+                        session[
+                            "pf_quality"
+                        ] = "medium"  # TODO, "high" if Google/Microsoft
 
                         if not sms_auth_required:
                             signed_in = True
@@ -888,19 +947,29 @@ def signin():
                             pretty_code = f"{code[:3]}-{code[3:6]}-{code[6:]}"
 
                             if USE_NOTIFY:
-                                response = notifications_client.send_sms_notification(
-                                    phone_number=user_attributes["sms_number"],
-                                    template_id=env_var(
-                                        "NOTIFY_SMS_AUTH_CODE_TEMPLATE"
-                                    ),
-                                    personalisation={
-                                        "sms_auth_code": pretty_code,
-                                        "display_name": user_attributes["display_name"]
-                                        if "display_name" in user_attributes
-                                        and user_attributes["display_name"]
-                                        else session["email"]["email"],
-                                    },
-                                )
+                                try:
+                                    response = (
+                                        notifications_client.send_sms_notification(
+                                            phone_number=user_attributes["sms_number"],
+                                            template_id=env_var(
+                                                "NOTIFY_SMS_AUTH_CODE_TEMPLATE"
+                                            ),
+                                            personalisation={
+                                                "sms_auth_code": pretty_code,
+                                                "display_name": user_attributes[
+                                                    "display_name"
+                                                ]
+                                                if "display_name" in user_attributes
+                                                and user_attributes["display_name"]
+                                                else session["email"]["email"],
+                                            },
+                                        )
+                                    )
+                                except Exception as e:
+                                    jprint(
+                                        {"error": e, "Error": traceback.format_exc()}
+                                    )
+                                    return returnError(500)
 
                             session["sms-sign-in-code"] = code
 
