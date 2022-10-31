@@ -35,6 +35,7 @@ resource "aws_cloudfront_cache_policy" "sso_wsgi_cache" {
           "true-client-ip",
           "true-user-agent",
           "true-host",
+          "x-cloudfront",
         ]
       }
     }
@@ -86,6 +87,7 @@ resource "aws_cloudfront_origin_request_policy" "sso_wsgi" {
         "true-client-ip",
         "true-user-agent",
         "true-host",
+        "x-cloudfront",
       ]
     }
   }
@@ -117,6 +119,12 @@ resource "aws_cloudfront_function" "viewer_response" {
 # == distribution ==
 
 resource "aws_cloudfront_distribution" "cdn" {
+  lifecycle {
+    ignore_changes = [
+      http_version
+    ]
+  }
+
   origin {
     domain_name = aws_s3_bucket.cdn_source_bucket.bucket_regional_domain_name
     origin_id   = local.s3_origin_id
@@ -206,6 +214,6 @@ resource "aws_cloudfront_distribution" "cdn" {
     cloudfront_default_certificate = local.use_acm ? false : true
     acm_certificate_arn            = local.use_acm ? aws_acm_certificate.cdn[0].arn : null
     ssl_support_method             = local.use_acm ? "sni-only" : null
-    minimum_protocol_version       = local.use_acm ? "TLSv1.2_2019" : null
+    minimum_protocol_version       = local.use_acm ? "TLSv1.2_2021" : null
   }
 }

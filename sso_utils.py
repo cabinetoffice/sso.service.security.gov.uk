@@ -42,12 +42,10 @@ def env_var(env: str, default: str = None, return_bool: bool = False):
     return res
 
 
-if env_var("ENVIRONMENT", "development") == "development":
-    file_variables.update(dotenv_values(".env.secrets.test"))
-
-
 ENVIRONMENT = env_var("ENVIRONMENT", "development")
-IS_PROD = "production" == ENVIRONMENT.lower()
+IS_PROD = ENVIRONMENT.lower().startswith("prod")
+if ENVIRONMENT == "development":
+    file_variables.update(dotenv_values(".env.secrets.test"))
 
 
 def to_list(s: str, delimiter: str = ",", to_lower: bool = True) -> list:
@@ -68,15 +66,15 @@ def decrypt_env_var(env: str) -> str:
         DECRYPTED = (
             boto3.client("kms")
             .decrypt(
-                CiphertextBlob=b64decode(envVar(env)),
+                CiphertextBlob=b64decode(env_var(env)),
                 EncryptionContext={
-                    "LambdaFunctionName": envVar("AWS_LAMBDA_FUNCTION_NAME")
+                    "LambdaFunctionName": env_var("AWS_LAMBDA_FUNCTION_NAME")
                 },
             )["Plaintext"]
             .decode("utf-8")
         )
     except Exception as e:
-        print("decryptEnvVar failed")
+        print("decrypt_env_var failed")
 
     return DECRYPTED
 

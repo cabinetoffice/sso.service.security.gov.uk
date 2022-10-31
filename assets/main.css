@@ -11,6 +11,11 @@
   background: red !important;
 }
 
+.govuk-panel--error {
+  color: white;
+  background: #a60000 !important;
+}
+
 .govuk-header__container {
   margin-bottom: -9px;
 }

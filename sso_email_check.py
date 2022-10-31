@@ -1,8 +1,11 @@
+import json
+
 from sso_utils import env_var, to_list
 from email_helper import email_parts
 
 
-def valid_email(email_input, client: dict = {}) -> bool:
+def valid_email(email_input, client: dict = {}, debug: bool = False) -> dict:
+    res = {"valid": False, "auth_type": None, "user_type": None}
     email_object = {}
 
     if type(email_input) == dict and "email" in email_input and "domain" in email_input:
@@ -11,7 +14,19 @@ def valid_email(email_input, client: dict = {}) -> bool:
         email_object = email_parts(email_input)
 
     if not email_object:
-        return False
+        if debug:
+            print(
+                json.dumps(
+                    {
+                        "sso_email_check": {
+                            "message": "No email object",
+                            "email_input": email_input,
+                        }
+                    },
+                    default=str,
+                )
+            )
+        return res
 
     email = email_object["email"]
     domain = email_object["domain"]
@@ -38,30 +53,73 @@ def valid_email(email_input, client: dict = {}) -> bool:
         allowed_emails = to_list(env_var("SIGN_IN_EMAILS_ALLOWED"))
         allowed_domains = to_list(env_var("SIGN_IN_DOMAINS_ALLOWED"))
 
+    if debug:
+        print(
+            json.dumps(
+                {
+                    "sso_email_check": {
+                        "email": email,
+                        "domain": domain,
+                        "blocked_emails": blocked_emails,
+                        "blocked_domains": blocked_domains,
+                        "allowed_emails": allowed_emails,
+                        "allowed_domains": allowed_domains,
+                    }
+                },
+                default=str,
+            )
+        )
+
     # Blocked / negative checks
 
     if blocked_emails:
         if email in blocked_emails:
-            return False
+            return res
 
     if blocked_domains:
         if domain in blocked_domains:
-            return False
-        for domain_to_check in blocked_domains:
-            if "*" in domain_to_check and domain.endswith(domain_to_check.strip("*")):
-                return False
+            return res
+        else:
+            for domain_to_check in blocked_domains:
+                if "*" in domain_to_check:
+                    if domain.endswith(domain_to_check.strip("*")):
+                        return res
+                    elif domain == domain_to_check.strip("*").strip("."):
+                        return res
+                elif domain.endswith(f".{domain_to_check}"):
+                    return res
 
     # Allowed / positive checks
 
     if allowed_emails:
         if email in allowed_emails:
-            return True
+            res["valid"] = True
 
     if allowed_domains:
         if domain in allowed_domains:
-            return True
-        for domain_to_check in allowed_domains:
-            if "*" in domain_to_check and domain.endswith(domain_to_check.strip("*")):
-                return True
+            res["valid"] = True
+        else:
+            for domain_to_check in allowed_domains:
+                if "*" in domain_to_check:
+                    if domain.endswith(domain_to_check.strip("*")):
+                        res["valid"] = True
+                    elif domain == domain_to_check.strip("*").strip("."):
+                        res["valid"] = True
+                elif domain.endswith(f".{domain_to_check}"):
+                    res["valid"] = True
 
-    return False
+    if res["valid"]:
+        res["auth_type"] = get_auth_type(email)
+        res["user_type"] = get_user_type(email)
+
+    return res
+
+
+def get_auth_type(email) -> str:
+    if email.endswith("@digital.cabinet-office.gov.uk"):
+        return "google"
+    return "email"
+
+
+def get_user_type(email) -> str:
+    return "user"

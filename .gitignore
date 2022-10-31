@@ -8,3 +8,4 @@
 .runtime/
 .target/
 *.zip
+**/.cf-*

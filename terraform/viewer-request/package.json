@@ -2,11 +2,13 @@
   "devDependencies": {
     "chai": "^4.3.4",
     "minify": "^9.1.0",
-    "mocha": "^8.3.2"
+    "mocha": "^8.3.2",
+    "replace-in-file": "^6.3.5"
   },
   "scripts": {
-    "test": "minify index.js > index.min.js && mocha --reporter spec 'test_*.js'",
-    "minify": "minify index.js > index.min.js"
+    "test": "npm run add_key && mocha --reporter spec 'test_*.js'",
+    "minify": "minify index.js > index.min.js",
+    "add_key": "npm run minify && replace-in-file --configFile=replace-config.js --quiet"
   },
   "name": "index",
   "version": "1.0.0",

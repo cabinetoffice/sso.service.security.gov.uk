@@ -42,7 +42,7 @@ fixture_1 = {
     },
     "headers": {
       "host": {
-        "value": "video.example.com"
+        "value": "sso.nonprod-service.security.gov.uk"
       },
       "user-agent": {
         "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:83.0) Gecko/20100101 Firefox/83.0"
@@ -156,7 +156,7 @@ describe("viewer_request", function() {
     expect(req.headers['true-client-ip'].value).to.equal('198.51.100.11');
 
     expect(headers).to.include('true-host');
-    expect(req.headers['true-host'].value).to.equal('video.example.com');
+    expect(req.headers['true-host'].value).to.equal('sso.nonprod-service.security.gov.uk');
 
     expect(headers).to.include('true-user-agent');
     expect(req.headers['true-user-agent'].value).to.equal('Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:83.0) Gecko/20100101 Firefox/83.0');

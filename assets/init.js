@@ -1,0 +1,1 @@
+var jss="js-enabled",b=null,bs=document.getElementsByTagName("body");1==bs.length&&(b=bs[0]),b&&"object"==typeof b.classList?b.classList.add(jss):b&&-1==b.className.indexOf(jss)&&(b.className=(b.className.trim()+" "+jss).trim());

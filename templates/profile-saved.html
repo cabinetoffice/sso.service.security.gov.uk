@@ -1,0 +1,32 @@
+{% extends "_primary.html" %}
+
+{% block content %}
+<div class="govuk-breadcrumbs">
+  <ol class="govuk-breadcrumbs__list">
+    <li class="govuk-breadcrumbs__list-item">
+      <a class="govuk-breadcrumbs__link" href="/">Single Sign-On</a>
+    </li>
+    <li class="govuk-breadcrumbs__list-item">
+      <a class="govuk-breadcrumbs__link" href="/profile">Profile</a>
+    </li>
+    <li class="govuk-breadcrumbs__list-item" aria-current="page">Saved</li>
+  </ol>
+</div>
+
+<main class="govuk-main-wrapper govuk-body " id="main-content" role="main">
+  <div>
+    <div class="govuk-panel govuk-panel--confirmation">
+      <h1 class="govuk-panel__title">
+        Changes saved
+      </h1>
+    </div>
+
+    <br/>
+
+    <div class="govuk-button-group">
+      <a href="/profile" role="button" draggable="false" class="govuk-button" data-module="govuk-button">Back to profile</a>
+    </div>
+  </div>
+
+</main>
+{% endblock %}

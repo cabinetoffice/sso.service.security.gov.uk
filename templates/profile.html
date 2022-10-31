@@ -13,12 +13,7 @@
 <main class="govuk-main-wrapper govuk-body " id="main-content" role="main">
   <h2 class="govuk-heading-l">Profile</h2>
 
-  <!--div>
-    <h2 class="govuk-label-wrapper">Sign in information</h2>
-    <p>Your profile is linked via email authentication with {{ email }}.</p>
-  </div>
-  <hr>
-  <p>&nbsp;</p-->
+  <!-- sub: {{ session["sub"] if "sub" in session else "None" }} -->
 
   <div>
     <form method="post">
@@ -31,7 +26,7 @@
         <div id="email-hint" class="govuk-hint">
           Your email cannot be changed.
         </div>
-        <input class="govuk-input" id="email" aria-describedby="email-hint" disabled="disabled" name="email" type="text" value="{{ email if email else '' }}" autocomplete="off">
+        <input class="govuk-input" id="email" aria-describedby="email-hint" disabled="disabled" name="email" type="text" value="{{ email_string }}" autocomplete="off">
       </div>
       <p>&nbsp;</p>
 

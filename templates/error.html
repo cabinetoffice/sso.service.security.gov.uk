@@ -11,10 +11,25 @@
 </div>
 
 <main class="govuk-main-wrapper govuk-body " id="main-content" role="main">
-  <h2 class="govuk-heading-l">Error</h2>
-
   <div>
-    <p>Something went wrong, you can {% if endpoint and not endpoint.startswith('/error') %} try <a href="{{ endpoint }}">clicking here to try again</a> or {% endif %}<a href="/">click here to go home</a>.</p>
+    <div class="govuk-panel govuk-panel--error">
+      <h1 class="govuk-panel__title">
+        {{ title or "Something went wrong." }}
+      </h1>
+    </div>
+    <p>&nbsp;</p>
+    <p>
+    {%- if message %}
+      {{ message }}
+      <br>
+    {%- endif %}
+
+    {%- if try_again_url and not try_again_url.startswith('/error') and not try_again_url == '/' %}
+      <a href="{{ try_again_url }}">Try again</a> or <a href="/">go to the SSO dashboard</a>.
+    {%- else %}
+      <a href="/">Go to the SSO dashboard</a>.
+    {%- endif %}
+    </p>
   </div>
 
 </main>

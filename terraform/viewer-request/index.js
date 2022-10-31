@@ -1,6 +1,8 @@
 function handler(event) {
     var request = event.request;
 
+    request.headers['x-cloudfront'] = { value: "XCF_REPLACE" };
+
     var client_ip = '';
     if (
       typeof(event.viewer) == "object" &&
@@ -35,6 +37,13 @@ function handler(event) {
       .split("?")[0]
       .split("#")[0]
       .replace(/\/+/, '\/');
+
+    if (![
+      "sso.nonprod-service.security.gov.uk",
+      "sso.service.security.gov.uk"
+    ].includes(host)) {
+      return redirect("https://sso.service.security.gov.uk"+norm_uri, true, 301, "Moved Permanently");
+    }
 
     if (norm_uri.match(/^(\/.well[-_]known)?\/security\.txt$/)) {
       return redirect(

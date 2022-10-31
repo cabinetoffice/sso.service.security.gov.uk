@@ -13,8 +13,15 @@
   </ol>
 </div>
 
+{%- set email_code = code_type in ["email"] %}
+{%- set sms_code = code_type in ["phone", "text", "sms"] %}
+{%- set display_type = "Text Message" if sms_code else ("Email" if email_code else "") %}
+{%- set device = "phone" if sms_code else ("email" if email_code else "") %}
+{%- set input_pattern = "[0-9\-]*" if sms_code else ("[0-9a-z\-]*" if email_code else "") %}
+{%- set input_placeholder = "123-456-789" if sms_code else ("abc-def-hij" if email_code else "") %}
+
 <main class="govuk-main-wrapper " id="main-content" role="main">
-  <h2 class="govuk-heading-l">Authentication Code</h2>
+  <h2 class="govuk-heading-l">{{ (display_type + " ") if display_type else "" }}Authentication Code</h2>
 
   {% if to_app_name %}
   <div class="govuk-warning-text">
@@ -29,14 +36,14 @@
   <form action="{{ form_url }}" method="post">
     <div class="govuk-form-group {{ 'govuk-form-group--error' if code_fail else '' }}">
       <label class="govuk-label" for="code">
-        Check your {{ code_type }} for the authentication code
+        Check your {{ device }} for the authentication code
       </label>
       {% if code_fail %}
       <p id="code-error" class="govuk-error-message">
         <span class="govuk-visually-hidden">Error:</span> Code wasn't recognised
       </p>
       {% endif %}
-      <input class="govuk-input govuk-input--width-10 {{ 'govuk-input--error' if code_fail else '' }}" id="code" name="code" type="code" pattern="[0-9a-z\-]*" placeholder="abc-def-hij" spellcheck="false" autocomplete="off">
+      <input class="govuk-input govuk-input--width-10 {{ 'govuk-input--error' if code_fail else '' }}" id="code" name="code" type="code" pattern="{{ input_pattern }}" placeholder="{{ input_placeholder }}" spellcheck="false" autocomplete="off">
     </div>
 
     <input type="hidden" id="csrf_form" name="csrf_form" value="{{ csrf_form }}">

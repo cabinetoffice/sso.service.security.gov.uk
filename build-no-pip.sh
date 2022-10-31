@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
 
-cp ./*.py .target/
-cp .env.* .target/
+if [ ! -f .cf-key ]; then
+    echo ".cf-key missing!"
+    exit 1
+fi
 
-# MAIN_CSS_HASH=($(md5sum assets/main.css))
-# echo "MAIN_CSS_HASH=${MAIN_CSS_HASH}" >> .target/.env.shared
+cp ./*.py .target/
+cp .env.shared .target/
+
+MAIN_CSS_HASH=($(md5sum assets/main.css))
+MAIN_JS_HASH=($(md5sum assets/main.js))
+echo "MAIN_CSS_HASH=${MAIN_CSS_HASH}" >> .target/.env.shared
+echo "MAIN_JS_HASH=${MAIN_JS_HASH}" >> .target/.env.shared
+
+echo "AWS_CLOUDFRONT_KEY=$(cat .cf-key)" >> .target/.env.shared
 
 cp -r templates/ .target/
 cp -r assets/ .target/

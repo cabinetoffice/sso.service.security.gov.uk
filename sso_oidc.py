@@ -22,6 +22,8 @@ URL_PREFIX = f"http{'s' if IS_HTTPS else ''}://{DOMAIN}"
 ENVIRONMENT = env_var("ENVIRONMENT", "development")
 IS_PROD = "production" == ENVIRONMENT.lower()
 
+_individual_clients = {}
+
 
 def get_clients() -> dict:
     res = {}
@@ -39,6 +41,25 @@ def get_clients() -> dict:
         jprint({"function": "get_clients", "clients": res})
 
     return res
+
+
+def get_client(client_id: str) -> dict:
+    if client_id:
+        if client_id not in _individual_clients:
+            clients = get_clients()
+            if client_id in clients:
+                _individual_clients[client_id] = clients[client_id]
+                _individual_clients[client_id]["ok"] = True
+
+        if client_id in _individual_clients:
+            return _individual_clients[client_id]
+
+    return {"ok": False}
+
+
+def is_client(client_id: str) -> bool:
+    client = get_client(client_id)
+    return "ok" in client and client["ok"] == True
 
 
 def generate_google_auth_url(sub: str) -> str:
@@ -313,11 +334,14 @@ def check_user_sub(sub: str) -> bool:
 
 
 def get_user_sub(
-    gmail_sub: str = None, microsoft_sub: str = None, email: str = None, sub: str = None
+    google_sub: str = None,
+    microsoft_sub: str = None,
+    email: str = None,
+    sub: str = None,
 ) -> dict:
     if sub is None:
-        if gmail_sub:
-            gs = read_file(f"subs/gmail/{gmail_sub}")
+        if google_sub:
+            gs = read_file(f"subs/gmail/{google_sub}")
             if gs is not None:
                 sub = gs.strip()
 
@@ -344,14 +368,17 @@ def get_user_sub(
 
 
 def write_user_sub(
-    gmail_sub: str = None, microsoft_sub: str = None, email: str = None, sub: str = None
+    google_sub: str = None,
+    microsoft_sub: str = None,
+    email: str = None,
+    sub: str = None,
 ) -> str:
-    if not gmail_sub and not microsoft_sub and not email:
+    if not google_sub and not microsoft_sub and not email:
         return None
 
     usub = {}
 
-    gus = get_user_sub(gmail_sub, microsoft_sub, email)
+    gus = get_user_sub(google_sub, microsoft_sub, email)
     if not gus:
         sub = secrets.token_hex(nbytes=32)
         jprint("write_user_sub: new sub:", sub)
@@ -365,17 +392,18 @@ def write_user_sub(
             except Exception as e:
                 jprint({"error": e})
 
-    if gmail_sub:
-        write_file(f"subs/gmail/{gmail_sub}", sub)
-        usub.update({"gmail_sub": gmail_sub})
+    if google_sub:
+        write_file(f"subs/gmail/{google_sub}", sub)
+        usub.update({"google_sub": google_sub})
 
     if microsoft_sub:
         write_file(f"subs/microsoft/{microsoft_sub}", sub)
         usub.update({"microsoft_sub": microsoft_sub})
 
     if email:
-        write_file(f"subs/email/{get_email_sub_hash(email)}", sub)
-        usub.update({"email": email})
+        email_hash = get_email_sub_hash(email)
+        write_file(f"subs/email/{email_hash}", sub)
+        usub.update({"email": email, "email_hash": email_hash})
 
     jprint("write_user_sub: updating sub:", sub)
     usub.update({"sub": sub})
@@ -384,12 +412,19 @@ def write_user_sub(
     return sub
 
 
-def update_subs_attributes(sub: str, attribute_updates: dict = {}):
-    gus = get_user_sub(sub=sub)
-    if "attributes" not in gus:
-        gus["attributes"] = {}
-    gus["attributes"].update(attribute_updates)
-    update_subs_json(sub, {"attributes": gus["attributes"]})
+def update_subs_attributes(sub: str, attribute_updates: dict = {}) -> bool:
+    res = False
+
+    try:
+        gus = get_user_sub(sub=sub)
+        if "attributes" not in gus:
+            gus["attributes"] = {}
+        gus["attributes"].update(attribute_updates)
+        res = update_subs_json(sub, {"attributes": gus["attributes"]})
+    except Exception as e:
+        jprint("update_subs_attributes:", e)
+
+    return res
 
 
 def get_subs_attributes(
