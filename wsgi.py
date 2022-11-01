@@ -116,6 +116,91 @@ def client_ip():
         return request.environ["HTTP_X_FORWARDED_FOR"]
 
 
+def search_request_values(res: dict, search: dict, find: str):
+    k, v = (None, None)
+
+    d = dict(search) if search else {}
+    for key in d:
+        nkey = key.lower().strip()
+        if nkey and nkey == find.lower().strip():
+            val = d[key]
+            if type(val) == list:
+                k, v = (find, val)
+            else:
+                k, v = (find, [val])
+            break
+
+    if k:
+        if k not in res:
+            res[k] = []
+        for inh in v:
+            if inh not in res[k]:
+                res[k].append(inh)
+    return res
+
+
+def get_request_val(
+    *keys: str,
+    use_headers: bool = False,
+    use_posted_data: bool = False,
+    use_querystrings: bool = False,
+    use_session: bool = False,
+):
+    grvs = get_request_vals(
+        *keys,
+        use_headers=use_headers,
+        use_posted_data=use_posted_data,
+        use_querystrings=use_querystrings,
+        use_session=use_session,
+        return_first=True,
+    )
+    if grvs and len(grvs) == 1:
+        res = grvs[list(grvs.keys())[0]]
+        if res and type(res) == list and len(res) == 1:
+            return res[0]
+        else:
+            return str(res)
+    return None
+
+
+def get_request_vals(
+    *keys: str,
+    use_headers: bool = False,
+    use_posted_data: bool = False,
+    use_querystrings: bool = False,
+    use_session: bool = False,
+    return_first: bool = False,
+):
+    res = {}
+    if not keys:
+        return res
+
+    for key in keys:
+        if use_headers:
+            res = search_request_values(res, request.headers, key)
+            if return_first and key in res:
+                return {key: res[key]}
+        if use_posted_data:
+            res = search_request_values(res, request.form, key)
+            if return_first and key in res:
+                return {key: res[key]}
+        if use_querystrings:
+            res = search_request_values(res, request.args, key)
+            if return_first and key in res:
+                return {key: res[key]}
+        if use_session:
+            res = search_request_values(res, session, key)
+            if return_first and key in res:
+                return {key: res[key]}
+
+    return {
+        k: (res[k][0] if len(res[k]) == 1 else ",".join(res[k]))
+        if type(res[k]) == list
+        else res[k]
+        for k in res
+    }
+
+
 def lambda_handler(event, context):
     try:
         if AWS_CLOUDFRONT_KEY and "headers" in event:
@@ -201,10 +286,11 @@ def oidc_config():
 
 @app.route("/auth/token", methods=["GET", "POST"])
 def auth_token():
-
-    required_keys = ["client_id", "client_secret", "code"]
-    for key in required_keys:
-        if key not in request.values:
+    keys = ["client_id", "client_secret", "code"]
+    params = get_request_vals(*keys, use_querystrings=True, use_posted_data=True)
+    for k in keys:
+        value = params.get(k)
+        if not value:
             jprint(
                 {
                     "path": "/auth/token",
@@ -213,20 +299,19 @@ def auth_token():
                 }
             )
             return returnError(401)
-        else:
-            if len(request.values[key]) != 64 and len(request.values[key]) != 36:
-                jprint(
-                    {
-                        "path": "/auth/token",
-                        "method": request.method,
-                        "error": f"auth_token: key '{key}' invalid, returning 401",
-                    }
-                )
-                return returnError(401)
+        elif len(value) != 64 and len(value) != 36:
+            jprint(
+                {
+                    "path": "/auth/token",
+                    "method": request.method,
+                    "error": f"auth_token: key '{key}' invalid, returning 401",
+                }
+            )
+            return returnError(401)
 
-    client_id = request.values["client_id"]
-    client_secret = request.values["client_secret"]
-    auth_code = request.values["code"]
+    client_id = params["client_id"]
+    client_secret = params["client_secret"]
+    auth_code = params["code"]
 
     gubac = sso_oidc.get_user_by_auth_code(client_id, client_secret, auth_code)
     if not gubac or "sub" not in gubac:
@@ -285,21 +370,36 @@ def auth_token():
 
 @app.route("/auth/profile", methods=["GET", "POST"])
 def auth_profile():
-    authorization = None
-    id_token = None
-
-    if "Authorization" in request.headers and " " in request.headers["Authorization"]:
-        authorization = request.headers["Authorization"].split(" ")[1]
-    elif "authorization" in request.values:
-        authorization = request.values["authorization"]
-    elif "token" in request.values:
-        authorization = request.values["token"]
-    elif "id_token" in request.values:
-        id_token = request.values["id_token"]
-
     user_info = {
         "sub": None,
     }
+
+    authorization = None
+    id_token = None
+
+    authorization = get_request_val(
+        "Authorization",
+        "Authorisation",
+        "Token",
+        use_headers=True,
+        use_querystrings=True,
+        use_posted_data=True,
+    )
+
+    id_token = get_request_val(
+        "id_token",
+        use_headers=True,
+        use_querystrings=True,
+        use_posted_data=True,
+    )
+
+    if authorization:
+        if authorization.lower().startswith("bearer "):
+            authorization = authorization.split(" ", 1)[1].strip()
+        if not re.search(r"^[a-zA-Z0-9]{64}$", authorization):
+            authorization = None
+            user_info["error"] = "Bad or no access_token sent"
+            return make_response(jsonify(user_info), 400)
 
     gus = {}
 
@@ -444,10 +544,13 @@ def auth_oidc():
     tmp_is_token = False
     tmp_is_id_token = False
 
-    if "response_type" in request.values:
-        tmp_response_types = request.values.get("response_type").lower()
-    elif "oidc_response_types" in session:
-        tmp_response_types = session["oidc_response_types"]
+    tmp_response_types = get_request_val(
+        "response_type",
+        "oidc_response_types",
+        use_session=True,
+        use_querystrings=True,
+        use_posted_data=True,
+    )
 
     if tmp_response_types:
         if "code" in tmp_response_types:
@@ -460,28 +563,36 @@ def auth_oidc():
     if not tmp_is_code and not tmp_is_token and not tmp_is_id_token:
         return set_browser_cookie(redirect("/error?type=response_type-not-set"))
 
-    if "response_mode" in request.values:
-        tmp_response_mode = request.values.get("response_mode").lower()
-    elif "oidc_response_mode" in session:
-        tmp_response_mode = session["oidc_response_mode"]
+    tmp_response_mode = get_request_val(
+        "response_mode",
+        "oidc_response_mode",
+        use_session=True,
+        use_querystrings=True,
+        use_posted_data=True,
+    )
 
-    tmp_form_resp = tmp_response_mode == "form_post"
+    tmp_form_resp = tmp_response_mode and tmp_response_mode == "form_post"
 
-    if "client_id" in request.values:
-        tmp_client_id = request.values.get("client_id")
-    elif "oidc_client_id" in session:
-        tmp_client_id = session["oidc_client_id"]
+    tmp_client_id = get_request_val(
+        "client_id",
+        "oidc_client_id",
+        use_session=True,
+        use_querystrings=True,
+        use_posted_data=True,
+    )
 
     if tmp_client_id:
         client = sso_oidc.get_client(tmp_client_id)
         if not client["ok"]:
             return set_browser_cookie(redirect("/error?type=client-id-unknown"))
 
-        raw_redirect_url = None
-        if "redirect_uri" in request.values:
-            raw_redirect_url = request.values.get("redirect_uri")
-        elif "oidc_redirect_uri" in session:
-            raw_redirect_url = session["oidc_redirect_uri"]
+        raw_redirect_url = get_request_val(
+            "redirect_uri",
+            "oidc_redirect_uri",
+            use_session=True,
+            use_querystrings=True,
+            use_posted_data=True,
+        )
 
         jprint(
             {
@@ -506,19 +617,33 @@ def auth_oidc():
         session["oidc_response_mode"] = tmp_response_mode
         session["oidc_response_types"] = tmp_response_types
 
-    tmp_scope = None
-    if "scope" in request.values:
-        tmp_scope = request.values.get("scope")
-    elif "oidc_scope" in session:
-        tmp_scope = session["oidc_scope"]
+    tmp_scope = get_request_val(
+        "scope",
+        "oidc_scope",
+        use_session=True,
+        use_querystrings=True,
+        use_posted_data=True,
+    )
 
     session["oidc_scope"] = sso_oidc.sanitise_scopes(tmp_scope)
 
-    if "state" in request.values:
-        session["oidc_state"] = request.values.get("state")
+    tmp_state = get_request_val(
+        "state",
+        use_session=True,
+        use_querystrings=True,
+        use_posted_data=True,
+    )
+    if tmp_state:
+        session["oidc_state"] = tmp_state
 
-    if "nonce" in request.values:
-        session["oidc_nonce"] = request.values.get("nonce")
+    tmp_nonce = get_request_val(
+        "state",
+        use_session=True,
+        use_querystrings=True,
+        use_posted_data=True,
+    )
+    if tmp_nonce:
+        session["oidc_nonce"] = tmp_nonce
 
     redirect_string = "/sign-in"
 
@@ -641,8 +766,14 @@ def signout():
 
     redirect_url = "/"
 
-    if "to_client" in request.values:
-        client = sso_oidc.get_client(request.values["to_client"])
+    to_client = get_request_val(
+        "to_client",
+        use_session=True,
+        use_querystrings=True,
+        use_posted_data=True,
+    )
+    if to_client:
+        client = sso_oidc.get_client(to_client)
         if client["ok"] and "app_url" in client:
             redirect_url = client["app_url"]
 
@@ -780,20 +911,21 @@ def profile():
         jprint({"path": "/profile", "method": request.method}, user_attributes)
 
         if request.method == "POST":
-            required_form_fields = ["csrf_form", "display-name", "sms-number"]
-            for field in required_form_fields:
-                if field not in request.form:
+            keys = ["csrf_form", "display-name", "sms-number"]
+            params = get_request_vals(*keys, use_posted_data=True)
+            for field in keys:
+                if field not in params:
                     return returnError(403)
 
             if "csrf" not in session:
                 return returnError(403)
 
-            if session["csrf"] != request.form["csrf_form"]:
+            if session["csrf"] != params["csrf_form"]:
                 return returnError(403)
 
-            new_display_name = sanitise_string(request.form["display-name"])
+            new_display_name = sanitise_string(params["display-name"])
             new_sms_number = sanitise_string(
-                request.form["sms-number"],
+                params["sms-number"],
                 allow_letters=False,
                 allow_space=False,
                 allow_single_quotes=False,
@@ -921,17 +1053,24 @@ def signin():
             )
             return set_browser_cookie(returnError(425))
 
-        if "csrf_form" in request.form:
-            csrf_form = request.form["csrf_form"]
-            if csrf_form != session["csrf"]:
+        params = get_request_vals(
+            "csrf_form", "email", "remember_me", "code", use_posted_data=True
+        )
+        if "csrf_form" not in params or not params["csrf_form"]:
+            return returnError(403)
+        else:
+            if params["csrf_form"] != session["csrf"]:
                 jprint(
                     "CSRF fail",
-                    {"csrf_form": csrf_form, "session['csrf']": session["csrf"]},
+                    {
+                        "csrf_form": params["csrf_form"],
+                        "session['csrf']": session["csrf"],
+                    },
                 )
                 return returnError(403)
 
-            if "email" in request.form:
-                email = email_parts(request.form["email"])
+            if "email" in params and params["email"]:
+                email = email_parts(params["email"])
 
                 ve = valid_email(email, debug=DEBUG)
                 if not ve["valid"]:
@@ -946,8 +1085,8 @@ def signin():
                     session["email"] = email
 
                     remember_me = False
-                    if "remember_me" in request.form:
-                        if request.form["remember_me"].lower() == "true":
+                    if "remember_me" in params:
+                        if params["remember_me"].lower() == "true":
                             remember_me = True
                     session["remember_me"] = remember_me
 
@@ -1047,9 +1186,9 @@ def signin():
                     set_attribute_none=True,
                 )
 
-            if "code" in request.form:
-                code = request.form["code"].lower().replace("-", "").strip()
-                code_type = request.form["code_type"]
+            if "code" in params:
+                code = params["code"].lower().replace("-", "").strip()
+                code_type = params["code_type"]
 
                 signed_in = False
 
@@ -1211,10 +1350,6 @@ def return_sign_in(
 ):
     session["csrf"] = random_string()
 
-    to_app_client_id = None
-    if "to_app" in request.values:
-        to_app_client_id = request.values["to_app"]
-
     erm = get_remember_me_cookie_value()
 
     page_params = {
@@ -1229,7 +1364,11 @@ def return_sign_in(
         "cancel_href": None,
     }
 
-    client = sso_oidc.get_client(to_app_client_id)
+    client = sso_oidc.get_client(
+        get_request_val(
+            "to_app", use_posted_data=True, use_querystrings=True, use_session=True
+        )
+    )
     if client["ok"]:
         if "name" in client:
             page_params.update({"to_app_name": client["name"]})
@@ -1237,7 +1376,7 @@ def return_sign_in(
         if "app_url" in client:
             page_params.update({"cancel_href": client["app_url"]})
 
-        page_params.update({"form_url": f"/sign-in?to_app={to_app_client_id}"})
+        page_params.update({"form_url": f"/sign-in?to_app={client['client_id']}"})
 
     return set_browser_cookie(
         make_response(
