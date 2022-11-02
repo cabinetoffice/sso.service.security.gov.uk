@@ -29,6 +29,10 @@ jobs:
           
       - name: Test
         shell: bash
+        env:
+          environment: ${{ matrix.environment }}
+          url: ${{ matrix.url }}
+          TF_WORKSPACE: ${{ matrix.TF_WORKSPACE }}
         run: |
           echo "environment-matrix: ${{ matrix.environment }}"
           echo "environment-envvar: $environment"
@@ -42,7 +46,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: ${{ secret.AWS_ROLE }}
+          role-to-assume: ${{ secrets.AWS_ROLE }}
           aws-region: eu-west-2
 
       - name: Test IAM credentials
