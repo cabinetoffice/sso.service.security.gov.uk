@@ -5,11 +5,13 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+      id-token: write   # This is required for requesting the JWT for AWS authentication
+      contents: read    # This is required for actions/checkout
+
 jobs:
   example_matrix:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
     strategy:
       max-parallel: 1
       matrix:
@@ -35,14 +37,14 @@ jobs:
           environment: ${{ matrix.environment }}
           url: ${{ matrix.url }}
           TF_WORKSPACE: ${{ matrix.TF_WORKSPACE }}
+          TESTSECRET: ${{ secrets.TESTSECRET }}
         run: |
-          echo "environment-matrix: ${{ matrix.environment }}"
           echo "environment-envvar: $environment"
-          echo "url-matrix: ${{ matrix.url }}"
           echo "url-envvar: $url"
-          echo "TF_WORKSPACE-matrix: ${{ matrix.TF_WORKSPACE }}"
           echo "TF_WORKSPACE-envvar: $TF_WORKSPACE"
           echo "Sleeping..."
+          echo "TESTSECRET-secrets: ${{ secrets.TESTSECRET }}" | tr -d 'a'
+          echo "TESTSECRET-envvar: $TESTSECRET" | tr -d 'a'
           sleep 10s
           
       - name: Configure AWS credentials
