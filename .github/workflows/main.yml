@@ -62,11 +62,13 @@ jobs:
           AWS_CLOUDFRONT_KEY: ${{ secrets.AWS_CLOUDFRONT_KEY }}
         run: |
           cd main/
+          chmod +x build/*.sh
           bash build/test_viewer-request.sh
 
       - name: Build and test viewer-response
         run: |
           cd main/
+          chmod +x build/*.sh
           bash build/test_viewer-response.sh
 
       - name: Build and test Flask app
@@ -74,6 +76,7 @@ jobs:
           AWS_CLOUDFRONT_KEY: ${{ secrets.AWS_CLOUDFRONT_KEY }}
         run: |
           cd main/
+          chmod +x build/*.sh
           bash build/build_lambda.sh
 
       - name: Configure AWS credentials for nonprod
@@ -91,6 +94,7 @@ jobs:
           AWS_REGION: ${{ matrix.AWS_REGION }}
         run: |
           cd main/
+          chmod +x build/*.sh
           bash build/test_viewer-request.sh
           bash build/test_viewer-response.sh
           bash build/build_lambda.sh

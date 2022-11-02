@@ -15,7 +15,7 @@ fi
 cp ./*.py .target/
 cp .env.shared .target/
 
-build/set_env-shared_lambda_build.sh
+./build/set_env-shared_lambda_build.sh
 
 cp -r templates/ .target/
 cp -r assets/ .target/
