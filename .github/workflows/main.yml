@@ -37,6 +37,7 @@ jobs:
       - name: Read .terraform-version file
         run: |
           TV=$(cat main/terraform/.terraform-version | tr -d [:space:])
+          echo "terraform_version=${TV}"
           echo "terraform_version=${TV}" >> $GITHUB_OUTPUT
 
       - uses: hashicorp/setup-terraform@v2
@@ -44,8 +45,9 @@ jobs:
           terraform_version: ${{ env.terraform_version }}
 
       - name: Read .python-version file
-        run:
+        run: |
           PV=$(cat main/.python-version | tr -d [:space:])
+          echo "python_version=${PV}"
           echo "python_version=${PV}" >> $GITHUB_OUTPUT
 
       - uses: actions/setup-python@v4
