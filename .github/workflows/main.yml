@@ -105,8 +105,6 @@ jobs:
         run: |
           cd main/
           aws s3 cp assets/ "s3://${S3_ASSET_BUCKET}/assets/" --recursive
-        env:
-          AWS_REGION: ${{ matrix.AWS_REGION }}
 
       - name: Check deployed URLs
         env:
