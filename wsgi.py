@@ -154,12 +154,16 @@ def get_request_val(
         use_session=use_session,
         return_first=True,
     )
+
     if grvs and len(grvs) == 1:
         res = grvs[list(grvs.keys())[0]]
-        if res and type(res) == list and len(res) == 1:
-            return res[0]
-        else:
-            return str(res)
+        if res:
+            if type(res) == list and len(res) == 1:
+                return res[0]
+            elif type(res) == list:
+                return ",".join([str(s) for s in res])
+            else:
+                return str(res)
     return None
 
 
@@ -287,7 +291,9 @@ def oidc_config():
 @app.route("/auth/token", methods=["GET", "POST"])
 def auth_token():
     keys = ["client_id", "client_secret", "code"]
-    params = get_request_vals(*keys, use_querystrings=True, use_posted_data=True)
+    params = get_request_vals(
+        *keys, use_querystrings=True, use_posted_data=True, use_headers=True
+    )
     for k in keys:
         value = params.get(k)
         if not value:
@@ -295,7 +301,7 @@ def auth_token():
                 {
                     "path": "/auth/token",
                     "method": request.method,
-                    "error": f"auth_token: key '{key}' does not exist, returning 401",
+                    "error": f"auth_token: key '{k}' does not exist, returning 401",
                 }
             )
             return returnError(401)
@@ -304,7 +310,7 @@ def auth_token():
                 {
                     "path": "/auth/token",
                     "method": request.method,
-                    "error": f"auth_token: key '{key}' invalid, returning 401",
+                    "error": f"auth_token: key '{k}' invalid, returning 401",
                 }
             )
             return returnError(401)
@@ -624,8 +630,8 @@ def auth_oidc():
         use_querystrings=True,
         use_posted_data=True,
     )
-
-    session["oidc_scope"] = sso_oidc.sanitise_scopes(tmp_scope)
+    if tmp_scope:
+        session["oidc_scope"] = sso_oidc.sanitise_scopes(tmp_scope)
 
     tmp_state = get_request_val(
         "state",
@@ -1054,7 +1060,12 @@ def signin():
             return set_browser_cookie(returnError(425))
 
         params = get_request_vals(
-            "csrf_form", "email", "remember_me", "code", use_posted_data=True
+            "csrf_form",
+            "email",
+            "remember_me",
+            "code",
+            "code_type",
+            use_posted_data=True,
         )
         if "csrf_form" not in params or not params["csrf_form"]:
             return returnError(403)
@@ -1189,6 +1200,8 @@ def signin():
             if "code" in params:
                 code = params["code"].lower().replace("-", "").strip()
                 code_type = params["code_type"]
+                if code_type not in ["email", "phone"]:
+                    return returnError(403)
 
                 signed_in = False
 
@@ -1328,9 +1341,14 @@ def signin():
                     )
 
                     redirect_url = "/dashboard"
-
-                    if "to_app" in session:
-                        if sso_oidc.is_client(session["to_app"]):
+                    to_app = get_request_val(
+                        "to_app",
+                        use_posted_data=True,
+                        use_querystrings=True,
+                        use_session=True,
+                    )
+                    if to_app:
+                        if sso_oidc.is_client(to_app):
                             redirect_url = "/auth/oidc"
 
                     return config_remember_me_cookie(

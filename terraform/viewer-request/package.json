@@ -2,7 +2,7 @@
   "devDependencies": {
     "chai": "^4.3.4",
     "minify": "^9.1.0",
-    "mocha": "^8.3.2",
+    "mocha": "^10.1.0",
     "replace-in-file": "^6.3.5"
   },
   "scripts": {
@@ -26,5 +26,9 @@
     "url": "https://github.com/cabinetoffice/sso.service.security.gov.uk/issues"
   },
   "homepage": "https://github.com/cabinetoffice/sso.service.security.gov.uk",
-  "description": ""
+  "description": "",
+  "engines": {
+    "npm": ">=8.0.0 <9.0.0",
+    "node": "=16.18.0"
+  }
 }

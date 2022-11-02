@@ -2,6 +2,7 @@ import hashlib
 import secrets
 import time
 import json
+import re
 import jwt_signing
 
 from sso_data_access import read_file, write_file, delete_file, read_all_files
@@ -40,6 +41,10 @@ def get_clients() -> dict:
     if not IS_PROD:
         jprint({"function": "get_clients", "clients": res})
 
+    for c in res:
+        if "client_id" not in res[c]:
+            res[c]["client_id"] = c
+
     return res
 
 
@@ -50,6 +55,8 @@ def get_client(client_id: str) -> dict:
             if client_id in clients:
                 _individual_clients[client_id] = clients[client_id]
                 _individual_clients[client_id]["ok"] = True
+                if "client_id" not in _individual_clients[client_id]:
+                    _individual_clients[client_id]["client_id"] = client_id
 
         if client_id in _individual_clients:
             return _individual_clients[client_id]
@@ -189,7 +196,11 @@ def sanitise_scopes(raw_scope=None) -> list:
     if type(raw_scope) == list:
         raw_scope = " ".join(raw_scope)
 
-    raw_scopes = raw_scope.lower().split(" ")
+    raw_scope = str(raw_scope).lower().replace("%20", " ")
+    raw_scope = re.sub(r"[\'\"\[\]\,]", " ", raw_scope)
+    raw_scope = re.sub(r"\s+", " ", raw_scope).strip()
+
+    raw_scopes = raw_scope.split(" ")
     for s in get_available_scopes():
         if s in raw_scopes:
             scopes.append(s)
