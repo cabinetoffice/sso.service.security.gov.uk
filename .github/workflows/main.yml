@@ -90,6 +90,7 @@ jobs:
         env:
           AWS_CLOUDFRONT_KEY: ${{ secrets.AWS_CLOUDFRONT_KEY }}
           AWS_REGION: ${{ matrix.AWS_REGION }}
+          TF_WORKSPACE: ${{ matrix.TF_WORKSPACE }}
         run: |
           cd main/
           chmod +x build/*.sh
