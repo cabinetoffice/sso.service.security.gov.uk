@@ -8,6 +8,8 @@ on:
 jobs:
   example_matrix:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     strategy:
       max-parallel: 1
       matrix:
