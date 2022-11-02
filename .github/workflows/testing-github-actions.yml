@@ -15,15 +15,9 @@ jobs:
           - environment: nonprod-aws
             url: https://sso.nonprod-service.security.gov.uk/
             TF_WORKSPACE: nonprod
-            AWS_CLOUDFRONT_KEY: ${{ secrets.AWS_CLOUDFRONT_KEY }}
-            AWS_ROLE: ${{ secrets.AWS_ROLE }}
-            AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT }}
           - environment: prod-aws
             url: https://sso.service.security.gov.uk/
             TF_WORKSPACE: prod
-            AWS_CLOUDFRONT_KEY: ${{ secrets.AWS_CLOUDFRONT_KEY }}
-            AWS_ROLE: ${{ secrets.AWS_ROLE }}
-            AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT }}
     environment:
       name: ${{ matrix.environment }}
     steps:
@@ -48,7 +42,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: ${{ matrix.AWS_ROLE }}
+          role-to-assume: ${{ secret.AWS_ROLE }}
           aws-region: eu-west-2
 
       - name: Test IAM credentials
