@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 CWD="$PWD"
 if [[ $PWD = */build ]]; then
@@ -7,13 +8,13 @@ fi
 
 AWS_CLOUDFRONT_KEY_FILE=".cf-key"
 
-if [ -z "$AWS_CLOUDFRONT_KEY" ]; then
+if [[ "${AWS_CLOUDFRONT_KEY:+isset}" != "isset" ]]; then
   build/set_cfkey.sh
 
   AWS_CLOUDFRONT_KEY=""
   if [ -f "$AWS_CLOUDFRONT_KEY_FILE" ]; then
     TMPKEY="$(tr -d "[:space:]" < "$AWS_CLOUDFRONT_KEY_FILE")"
-    if [ ! -z "$TMPKEY" ]; then
+    if [ -n "$TMPKEY" ]; then
         AWS_CLOUDFRONT_KEY="$TMPKEY"
     fi
   fi

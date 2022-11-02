@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC1091
+set -euo pipefail
 
 CWD="$PWD"
 if [[ $PWD = */build ]]; then
@@ -7,19 +8,19 @@ if [[ $PWD = */build ]]; then
 fi
 
 source build/source_cfkey.sh
-if [ -z "$AWS_CLOUDFRONT_KEY" ]; then
+if [[ "${AWS_CLOUDFRONT_KEY:+isset}" != "isset" ]]; then
   echo ".cf-key not found!"
   exit 1
 fi
 
 cd terraform/viewer-request/
 
-if [ ! -z "$(command -v nvm)" ]; then
+if [ -n "$(command -v nvm || echo '')" ]; then
   nvm install
   nvm use
 fi
 
-if [ -z "$(command -v npm)" ]; then
+if [ -z "$(command -v npm || echo '')" ]; then
   echo "npm command not found!"
   exit 1
 fi

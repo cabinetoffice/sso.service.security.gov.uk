@@ -35,24 +35,22 @@ jobs:
           path: main
 
       - name: Read .terraform-version file
-        id: terraformversion
         run: |
           TV=$(cat main/terraform/.terraform-version | tr -d [:space:])
-          echo "::set-output name=version::${TV}"
+          echo "terraform_version=${TV}" >> $GITHUB_OUTPUT
 
-      - uses: hashicorp/setup-terraform@v1
+      - uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: ${{ steps.terraformversion.outputs.version }}
+          terraform_version: ${{ env.terraform_version }}
 
       - name: Read .python-version file
-        id: pythonversion
         run:
           PV=$(cat main/.python-version | tr -d [:space:])
-          echo "::set-output name=version::${PV}"
+          echo "python_version=${PV}" >> $GITHUB_OUTPUT
 
       - uses: actions/setup-python@v4
         with:
-          python-version: ${{ steps.pythonversion.outputs.version }}
+          python-version: ${{ env.python_version }}
 
       - name: Show me files
         run: ls -lah
@@ -80,7 +78,7 @@ jobs:
           bash build/build_lambda.sh
 
       - name: Configure AWS credentials for nonprod
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           role-to-assume: ${{ secrets.AWS_ROLE }}
           aws-region: ${{ matrix.AWS_REGION }}
@@ -99,6 +97,7 @@ jobs:
           bash build/test_viewer-response.sh
           bash build/build_lambda.sh
           cd terraform/
+          terraform workspace show
           terraform init
           terraform apply -auto-approve
 

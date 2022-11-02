@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC1091
+set -euo pipefail
 
 CWD="$PWD"
 if [[ $PWD = */build ]]; then
@@ -7,13 +8,13 @@ if [[ $PWD = */build ]]; then
 fi
 
 source build/source_cfkey.sh
-if [ -z "$AWS_CLOUDFRONT_KEY" ]; then
+if [[ "${AWS_CLOUDFRONT_KEY:+isset}" != "isset" ]]; then
   echo ".cf-key not found!"
   exit 1
 fi
 
 source build/source_python.sh
-if [ -z "$PYTHON" ]; then
+if [[ "${PYTHON:+isset}" != "isset" ]]; then
   echo "python not found!"
   exit 1
 fi
@@ -46,6 +47,7 @@ find . -type d -exec chmod 0755 {} \;
 
 ZIP_FILE="../target.zip"
 zip -r "$ZIP_FILE" .
+sleep 1s
 if [ ! -f "$ZIP_FILE" ]; then
   echo "ZIP not found!"
   exit 1
