@@ -1,0 +1,55 @@
+name: Matrix environment test
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  example_matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      matrix:
+        include:
+          - environment: nonprod-aws
+            url: https://sso.nonprod-service.security.gov.uk/
+            TF_WORKSPACE: nonprod
+            AWS_CLOUDFRONT_KEY: ${{ secrets.AWS_CLOUDFRONT_KEY }}
+            AWS_ROLE: ${{ secrets.AWS_ROLE }}
+            AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT }}
+          - environment: prod-aws
+            url: https://sso.service.security.gov.uk/
+            TF_WORKSPACE: prod
+            AWS_CLOUDFRONT_KEY: ${{ secrets.AWS_CLOUDFRONT_KEY }}
+            AWS_ROLE: ${{ secrets.AWS_ROLE }}
+            AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT }}
+    environment:
+      name: ${{ matrix.environment }}
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v3
+        with:
+          ref: main
+          path: main
+          
+      - name: Test
+        shell: bash
+        run: |
+          echo "environment-matrix: ${{ matrix.environment }}"
+          echo "environment-envvar: $environment"
+          echo "url-matrix: ${{ matrix.url }}"
+          echo "url-envvar: $url"
+          echo "TF_WORKSPACE-matrix: ${{ matrix.TF_WORKSPACE }}"
+          echo "TF_WORKSPACE-envvar: $TF_WORKSPACE"
+          echo "Sleeping..."
+          sleep 10s
+          
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ matrix.AWS_ROLE }}
+          aws-region: eu-west-2
+
+      - name: Test IAM credentials
+        run: aws sts get-caller-identity
