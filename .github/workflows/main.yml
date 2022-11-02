@@ -121,7 +121,7 @@ jobs:
           curl -v "https://${SERVICE_DOMAIN}/.well-known/openid-configuration" \
             --connect-timeout 10 --max-redirs 0 --silent --stderr - > .oidc.txt
           egrep -i '< HTTP/[0123\.]+ 200' .oidc.txt
-          egrep -i "^\s*\"issuer\": \"https://${SERVICE_DOMAIN}\"" .oidc.txt
+          egrep -i "\"issuer\":\s*\"https://${SERVICE_DOMAIN}\"" .oidc.txt
 
           echo "Checking '/' is public"
           curl -v "https://${SERVICE_DOMAIN}/" \
