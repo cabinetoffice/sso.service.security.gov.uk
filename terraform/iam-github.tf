@@ -27,7 +27,10 @@ resource "aws_iam_policy" "github_policy" {
                   "s3:Head*",
                   "lambda:List*",
                   "lambda:Get*",
-                  "ec2:Describe*"
+                  "ec2:Describe*",
+                  "cloudfront:List*",
+                  "cloudfront:Get*",
+                  "cloudfront:Describe*",
               ],
               Resource = "*"
           },
@@ -74,7 +77,12 @@ resource "aws_iam_policy" "github_policy" {
           {
               Effect   = "Allow",
               Action   = [
-                  "cloudfront:*"
+                "cloudfront:Associate*",
+                "cloudfront:Create*",
+                "cloudfront:Delete*",
+                "cloudfront:Publish*",
+                "cloudfront:Test*",
+                "cloudfront:Update*",
               ],
               Resource = [
                   "arn:aws:cloudfront::*:cache-policy/${aws_cloudfront_cache_policy.sso_wsgi_cache.id}",
