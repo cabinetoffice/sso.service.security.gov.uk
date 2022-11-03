@@ -153,9 +153,9 @@ def redact_string(res):
     regex_finds = []
     for p in redact_prefixes:
         if p:
-            repr = re.compile(f"[\"'&\?\=]{p}[\"']?[:=]\s*[\"']?([a-zA-Z\-0-9]+)")
+            repr = re.compile(f"[\"'&\?\=]{p}[\"']?[:=]\s*[\"']?([\.a-zA-Z\-0-9\_\/]+)")
             for rf in repr.findall(res):
-                if rf:
+                if rf and len(rf) >= 10:
                     regex_finds.append(rf)
 
     to_redact = redact_strings + regex_finds
