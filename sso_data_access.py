@@ -184,7 +184,7 @@ def read_file(filename: str, default: str = None, bucket_type: str = "sessions")
             else:
                 raise Exception("Missing 'Body' in s3_object")
         except Exception as e:
-            jprint({"function": "read_file", "error": str(e)})
+            jprint({"function": "read_file", "error": str(e), "filename": filename})
     else:
         fn = os.path.join(
             os.path.join(TMP_PATH, "clients") if bucket_type == "clients" else TMP_PATH,
