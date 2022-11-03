@@ -60,6 +60,14 @@ function handler(event) {
       };
     }
 
+    if (norm_uri.match(/^\/.well[-_]known\/(tea(pot)?|☕|coffee)/)) {
+      return {
+          statusCode: 418,
+          statusDescription: "I'm a teapot",
+          body: "I'm a teapot"
+      };
+    }
+
     if (norm_uri.match(/^\/.well[-_]known\/status/)) {
       return {
           statusCode: 200,
