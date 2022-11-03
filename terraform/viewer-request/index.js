@@ -45,21 +45,37 @@ function handler(event) {
       return redirect("https://sso.service.security.gov.uk"+norm_uri, true, 301, "Moved Permanently");
     }
 
-    if (norm_uri.match(/^(\/.well[-_]known)?\/security\.txt$/)) {
+    if (norm_uri.match(/^(\/.well[-_]known)?\/security(\.txt)?/)) {
       return redirect(
         "https://vulnerability-reporting.service.security.gov.uk/.well-known/security.txt",
         true
       );
     }
 
-    if (norm_uri.match(/^\/not-recognised(\.html?)?$/)) {
+    if (norm_uri.match(/^\/.well[-_]known\/hosting(-provider)?/)) {
+      return {
+          statusCode: 200,
+          statusDescription: "OK",
+          body: "https://aws.amazon.com/cloudfront/\nhttps://github.com/cabinetoffice/sso.service.security.gov.uk"
+      };
+    }
+
+    if (norm_uri.match(/^\/.well[-_]known\/status/)) {
+      return {
+          statusCode: 200,
+          statusDescription: "OK",
+          body: "OK"
+      };
+    }
+
+    if (norm_uri.match(/^\/not-recognised/)) {
       return redirect(
         "/help#dont-recognise-email-or-text",
         true
       );
     }
 
-    if (norm_uri.match(/^\/.well[-_]known\/change-password$/)) {
+    if (norm_uri.match(/^\/.well[-_]known\/change-password/)) {
       return redirect(
         "/help#how-do-i-change-my-password",
         true

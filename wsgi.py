@@ -230,12 +230,9 @@ def lambda_handler(event, context):
         return {"statusCode": 500}
 
 
-@app.route("/internal/<check>")
-def health_check(check="health"):
-    if check == "health":
-        return "IMOK {}".format(check)
-    else:
-        return "FAIL dependencies"
+@app.route("/internal/health")
+def health_check():
+    return "IMOK"
 
 
 @app.route("/.well-known/jwks.json")
