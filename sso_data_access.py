@@ -1,6 +1,8 @@
 import os
 import boto3
 
+from time import sleep
+
 from sso_utils import env_var, jprint
 
 USE_AWS_S3_SESSIONS = env_var("USE_AWS_S3_SESSIONS", "f", return_bool=True)
@@ -211,6 +213,7 @@ def write_file(filename: str, content: str = "", bucket_type: str = "sessions") 
                 Key=filename,
             )
             res = True
+            sleep(0.1)
         except Exception as e:
             jprint({"function": "write_file", "error": str(e)})
     else:
