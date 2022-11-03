@@ -60,7 +60,7 @@ function handler(event) {
       };
     }
 
-    if (norm_uri.match(/^\/.well[-_]known\/(tea(pot)?|☕|coffee)/)) {
+    if (norm_uri.match(/^\/.well[-_]known\/(tea(pot)?|☕|%e2%98%95|coffee)/)) {
       return {
           statusCode: 418,
           statusDescription: "I'm a teapot",
