@@ -3,12 +3,12 @@ name: Test and deploy to AWS
 on:
   push:
     branches: [ main ]
-  paths-ignore:
-    - '.github/workflows/codeql.yml'
-    - '.github/dependabot.yml'
-    - 'build/**'
-    - 'examples/**'
-    - '**.md'
+    paths-ignore:
+      - '.github/workflows/codeql.yml'
+      - '.github/dependabot.yml'
+      - 'build/**'
+      - 'examples/**'
+      - '**.md'
   workflow_dispatch:
 
 permissions:
