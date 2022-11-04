@@ -1381,7 +1381,7 @@ def return_sign_in(
         "session": session,
         "is_error": is_error,
         "code_fail": code_fail,
-        "title": f"{code_type.title()} Code",
+        "title": code_type.title(),
         "form_url": "/sign-in",
         "code_type": code_type,
         "cancel_href": None,
