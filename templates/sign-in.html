@@ -54,10 +54,12 @@
     </div-->
 
     <input type="hidden" id="csrf_form" name="csrf_form" value="{{ csrf_form }}">
-    <input type="submit" value="Continue" class="govuk-button" data-module="govuk-button"></input>
-    {% if cancel_href %}
-    <a href="{{ cancel_href }}" role="button" draggable="false" class="govuk-button govuk-button--secondary" data-module="govuk-button">Cancel</a>
-    {% endif %}
+    <div class="govuk-button-group">
+      <input type="submit" value="Continue" class="govuk-button" data-module="govuk-button"></input>
+      {% if cancel_href %}
+      <a href="{{ cancel_href }}" role="button" draggable="false" class="govuk-button govuk-button--secondary" data-module="govuk-button">Cancel</a>
+      {% endif %}
+    </div>
   </form>
 
 </main>
