@@ -5,6 +5,7 @@ import json
 import re
 import jwt_signing
 
+from sso_factors import FactorQuality, calculate_auth_quality
 from sso_data_access import read_file, write_file, delete_file, read_all_files
 from sso_utils import jprint, env_var
 
@@ -144,8 +145,8 @@ def generate_id_token(
     client_id: str,
     user: dict,
     scopes: list = ["openid"],
-    pf_quality: str = None,
-    mfa_quality: str = None,
+    pf_quality: FactorQuality = FactorQuality.none,
+    mfa_quality: FactorQuality = FactorQuality.none,
     time_now: int = int(time.time()),
 ):
     id_token = None
@@ -156,14 +157,19 @@ def generate_id_token(
     sub = user["sub"]
     email = user["email"]
 
+    pfq = FactorQuality.get(pf_quality).name
+    mfq = FactorQuality.get(mfa_quality).name
+    aq = calculate_auth_quality(pfq, mfq)
+
     payload = {
         "iss": URL_PREFIX,
         "iat": time_now,
         "exp": exp_time,
         "aud": client_id,
         "sub": sub,
-        "pf_quality": pf_quality,
-        "mfa_quality": mfa_quality,
+        "pf_quality": pfq.name,
+        "mfa_quality": mfq.name,
+        "auth_quality": aq.name,
     }
 
     # mfa quality: none, low, medium, high

@@ -33,6 +33,7 @@ from sso_email_check import valid_email
 from email_helper import email_parts
 from sso_ua import guess_browser
 from sso_google_auth import GoogleAuth
+from sso_factors import FactorQuality, calculate_auth_quality
 
 ENVIRONMENT = env_var("ENVIRONMENT", "development")
 jprint("Starting wsgi.py - ENVIRONMENT:", ENVIRONMENT)
@@ -60,7 +61,7 @@ notifications_client = (
     NotificationsAPIClient(NOTIFY_API_KEY) if USE_NOTIFY and NOTIFY_API_KEY else None
 )
 
-GOOGLE_CLIENT_ID = env_var("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_ID = None  # env_var("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = env_var("GOOGLE_CLIENT_SECRET")
 ga = None
 try:
@@ -375,6 +376,9 @@ def auth_token():
 def auth_profile():
     user_info = {
         "sub": None,
+        "pf_quality": FactorQuality.none,
+        "mfa_quality": FactorQuality.none,
+        "auth_quality": FactorQuality.none,
     }
 
     authorization = None
@@ -419,10 +423,14 @@ def auth_profile():
         user_info["sub"] = gus["sub"]
 
         if "pf_quality" in gus:
-            user_info["pf_quality"] = gus["pf_quality"]
+            user_info["pf_quality"] = FactorQuality.get(gus["pf_quality"])
 
         if "mfa_quality" in gus:
-            user_info["mfa_quality"] = gus["mfa_quality"]
+            user_info["mfa_quality"] = FactorQuality.get(gus["mfa_quality"])
+
+        user_info["auth_quality"] = calculate_auth_quality(
+            user_info["pf_quality"], user_info["mfa_quality"]
+        )
 
         if "email" in gus["scopes"] and "email" in gus:
             user_info["email"] = gus["email"]
@@ -473,8 +481,8 @@ def google_callback():
             )
             session["sub"] = sub
             session["email"] = email
-            session["pf_quality"] = "high"
-            session["mfa_quality"] = None
+            session["pf_quality"] = FactorQuality.high
+            session["mfa_quality"] = FactorQuality.none
 
             user_attributes = sso_oidc.get_subs_attributes(
                 sub,
@@ -1228,7 +1236,7 @@ def signin():
                         ):
                             session.pop("email-sign-in-complete")
                             session.pop("sms-sign-in-code")
-                            session["mfa_quality"] = "medium"
+                            session["mfa_quality"] = FactorQuality.medium
                             signed_in = True
                         else:
                             return redirect("/sign-in")
@@ -1255,8 +1263,8 @@ def signin():
                     else:
                         session.pop("email-sign-in-code")
                         session["email-sign-in-complete"] = True
-                        session["mfa_quality"] = None
-                        session["pf_quality"] = "medium"
+                        session["mfa_quality"] = FactorQuality.none
+                        session["pf_quality"] = FactorQuality.medium
 
                         if not sms_auth_required:
                             signed_in = True

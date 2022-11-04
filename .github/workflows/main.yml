@@ -3,6 +3,12 @@ name: Test and deploy to AWS
 on:
   push:
     branches: [ main ]
+  paths-ignore:
+    - '.github/workflows/codeql.yml'
+    - '.github/dependabot.yml'
+    - 'build/**'
+    - 'examples/**'
+    - '**.md'
   workflow_dispatch:
 
 permissions:
@@ -21,7 +27,7 @@ jobs:
             SERVICE_DOMAIN: sso.nonprod-service.security.gov.uk
             TF_WORKSPACE: nonprod
             AWS_REGION: eu-west-2
-          - environment: prod-aws
+          - environment: prod-aws-ignore
             SERVICE_DOMAIN: sso.service.security.gov.uk
             TF_WORKSPACE: prod
             AWS_REGION: eu-west-2
