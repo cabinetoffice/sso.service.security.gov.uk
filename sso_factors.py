@@ -126,7 +126,7 @@ class FactorQuality(str, Enum, metaclass=FactorQualityMeta):
         return cls.none
 
 
-def calculate_auth_quality(pf_quality: str = None, mfa_quality: str = None) -> str:
+def calculate_auth_quality(pf_quality=None, mfa_quality=None) -> str:
     pfq = FactorQuality.get(pf_quality)
     mfq = FactorQuality.get(mfa_quality)
 

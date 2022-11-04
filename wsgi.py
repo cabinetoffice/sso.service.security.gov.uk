@@ -61,7 +61,7 @@ notifications_client = (
     NotificationsAPIClient(NOTIFY_API_KEY) if USE_NOTIFY and NOTIFY_API_KEY else None
 )
 
-GOOGLE_CLIENT_ID = None  # env_var("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_ID = env_var("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = env_var("GOOGLE_CLIENT_SECRET")
 ga = None
 try:

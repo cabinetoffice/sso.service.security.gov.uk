@@ -157,8 +157,8 @@ def generate_id_token(
     sub = user["sub"]
     email = user["email"]
 
-    pfq = FactorQuality.get(pf_quality).name
-    mfq = FactorQuality.get(mfa_quality).name
+    pfq = FactorQuality.get(pf_quality)
+    mfq = FactorQuality.get(mfa_quality)
     aq = calculate_auth_quality(pfq, mfq)
 
     payload = {
