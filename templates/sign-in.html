@@ -31,9 +31,9 @@
       <!--div id="email-hint" class="govuk-hint">
         We’ll use this to direct you to your sign in provider
       </div-->
-      {% if is_error %}
+      {% if is_error and fail_message %}
       <p id="email-error" class="govuk-error-message">
-        <span class="govuk-visually-hidden">Error:</span> Email address wasn't recognised
+        <span class="govuk-visually-hidden">Error:</span> {{ fail_message }}
       </p>
       {% endif %}
       <!-- aria-describedby="email-hint" -->

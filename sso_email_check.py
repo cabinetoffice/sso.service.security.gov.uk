@@ -116,6 +116,10 @@ def valid_email(email_input, client: dict = {}, debug: bool = False) -> dict:
 
 
 def get_auth_type(email) -> str:
+    # if email.endswith("oliver.chalk@digital.cabinet-office.gov.uk"):
+    #    return "microsoft"
+    if email.endswith("oliver.chalk@cabinetoffice.gov.uk"):
+        return "google"
     if email.endswith("@digital.cabinet-office.gov.uk"):
         return "google"
     return "email"
