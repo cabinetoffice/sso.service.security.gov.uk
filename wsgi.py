@@ -662,7 +662,10 @@ def google_callback():
         session.pop("google_state", None)
 
         if (
-            "error" in gr and gr["error"] and "interaction_required" in gr["error"]
+            "error" in gr
+            and gr["error"]
+            and gr["error_message"]
+            and "interaction_required" in gr["error_message"]
         ) or (
             "error_subtype" in gr
             and gr["error_subtype"]
