@@ -1451,8 +1451,8 @@ def signin():
                         ):
                             return redirect("/sign-in")
 
-                        code = random_string(9, only_numbers=True)
-                        pretty_code = f"{code[:3]}-{code[3:6]}-{code[6:]}"
+                        code = random_string(6, only_numbers=True)
+                        pretty_code = f"{code[:3]}-{code[3:6]}"
 
                         if USE_NOTIFY:
                             try:
@@ -1544,6 +1544,23 @@ def return_sign_in(
 
     erm = get_remember_me_cookie_value()
 
+    to_app = get_request_val(
+        "to_app", use_posted_data=True, use_querystrings=True, use_session=True
+    )
+
+    jprint(
+        {
+            "is_error": is_error,
+            "code_fail": code_fail,
+            "is_code": is_code,
+            "code_type": code_type,
+            "fail_message": fail_message,
+            "force_email": force_email,
+            "erm": erm,
+            "to_app": to_app,
+        }
+    )
+
     page_params = {
         "email_remember_me": None if is_error or force_email else erm,
         "csrf_form": get_csrf_session(),
@@ -1558,11 +1575,7 @@ def return_sign_in(
         "cancel_href": None,
     }
 
-    client = sso_oidc.get_client(
-        get_request_val(
-            "to_app", use_posted_data=True, use_querystrings=True, use_session=True
-        )
-    )
+    client = sso_oidc.get_client(to_app)
     if client["ok"]:
         if "name" in client:
             page_params.update({"to_app_name": client["name"]})
