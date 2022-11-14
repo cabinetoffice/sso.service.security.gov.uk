@@ -1284,7 +1284,7 @@ def signin():
 
                 remember_me = False
                 if "remember_me" in params:
-                    if params["remember_me"].lower() == "true":
+                    if str(params["remember_me"]).lower() == "true":
                         remember_me = True
                 session["remember_me"] = remember_me
 
