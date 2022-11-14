@@ -1245,6 +1245,7 @@ def signin():
     code_fail = False
 
     if request.method != "POST":
+        session.clear()
         return return_sign_in()
     else:
         if not browser_cookie_value:
