@@ -1386,6 +1386,8 @@ def signin():
                 "browser_cookie_value": browser_cookie_value,
             }
         )
+
+        return return_sign_in(is_code=True, code_type="email")
         # end code verification
 
     user_attributes = {}
