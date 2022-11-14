@@ -249,6 +249,19 @@ def get_request_vals(
             if return_first and key in res:
                 return {key: res[key]}
 
+    if DEBUG:
+        jprint(
+            {
+                "get_request_vals: res": res,
+                "keys": keys,
+                "use_headers": use_headers,
+                "use_posted_data": use_posted_data,
+                "use_querystrings": use_querystrings,
+                "use_session": use_session,
+                "return_first": return_first,
+            }
+        )
+
     return {
         k: (res[k][0] if len(res[k]) == 1 else ",".join(res[k]))
         if type(res[k]) == list
