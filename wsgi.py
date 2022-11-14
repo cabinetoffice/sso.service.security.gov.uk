@@ -1248,6 +1248,7 @@ def signin():
             "code",
             "code_type",
             use_posted_data=True,
+            use_session=True,
         )
         if "email" not in params or not params["email"]:
             jprint("signin: email not in params", {"params": params})
