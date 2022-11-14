@@ -1246,7 +1246,6 @@ def signin():
     signed_in = False
 
     if request.method != "POST":
-        session.clear()
         return return_sign_in()
 
     if not browser_cookie_value:
@@ -1542,6 +1541,7 @@ def signin():
         )
 
     # shouldn't get to here
+    session.clear()
     return redirect("/sign-in")
 
 
