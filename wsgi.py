@@ -1245,7 +1245,7 @@ def signin():
     code_fail = False
 
     if request.method != "POST":
-        session.clear()
+        # session.clear()
         return return_sign_in()
     else:
         if not browser_cookie_value:
@@ -1443,6 +1443,8 @@ def signin():
                     jprint(
                         json.dumps(
                             {
+                                "code": code,
+                                "email-sign-in-code": session["email-sign-in-code"],
                                 "email": session["email"]["email"]
                                 if "email" in session and "email" in session["email"]
                                 else "",
