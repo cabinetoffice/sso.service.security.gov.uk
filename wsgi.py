@@ -1243,315 +1243,304 @@ def signin():
     browser_cookie_value = get_browser_cookie_value()
     c_ip = client_ip()
     code_fail = False
+    signed_in = False
 
     if request.method != "POST":
-        # session.clear()
+        session.clear()
         return return_sign_in()
-    else:
-        if not browser_cookie_value:
-            jprint(
-                {"path": "/profile", "method": request.method},
-                "browser_cookie_value not found in request",
-            )
-            return returnError(425)
 
-        params = get_request_vals(
-            "email",
-            "remember_me",
-            "code",
-            "code_type",
-            use_posted_data=True,
-            use_session=True,
+    if not browser_cookie_value:
+        jprint(
+            {"path": "/profile", "method": request.method},
+            "browser_cookie_value not found in request",
         )
-        if "email" not in params or not params["email"]:
-            jprint("signin: email not in params", {"params": params})
+        return returnError(425)
+
+    params = get_request_vals(
+        "email",
+        "remember_me",
+        "code",
+        "code_type",
+        use_posted_data=True,
+        use_session=True,
+    )
+    if "email" not in params or not params["email"]:
+        jprint("signin: email not in params", {"params": params})
+        return return_sign_in(is_error=True)
+
+    # if not attempting a code verification
+    if "code" not in params:
+        email = email_parts(params["email"])
+
+        ve = valid_email(email, debug=DEBUG)
+        if not ve["valid"]:
+            jprint("signin: email_verified is false", {"email": email})
             return return_sign_in(is_error=True)
+
+        auth_type = ve["auth_type"]
+        if ve["user_type"] is None or ve["user_type"] != "user":
+            return returnError(403)
+
+        session["email"] = email
+
+        remember_me = False
+        if "remember_me" in params:
+            if str(params["remember_me"]).lower() == "true":
+                remember_me = True
+        session["remember_me"] = remember_me
+
+        force_email = False
+        if "force_email" in session:
+            force_email = session["force_email"]
+            session.pop("force_email", None)
+
+        if not force_email and ga and auth_type == "google":
+            gr = ga.step_one_get_redirect_url(
+                callback_url=f"{URL_PREFIX}/auth/google_callback",
+                login_hint=email["email"],
+                hd_domain_hint=email["domain"],
+            )
+            if "error" in gr and gr["error"] == False and "url" in gr:
+                session["google_state"] = gr["state"]
+                session["google_nonce"] = gr["nonce"]
+                return redirect(gr["url"])
+            else:
+                return returnError(403)
+
+        if not force_email and ma and auth_type == "microsoft":
+            mr = ma.step_one_get_redirect_url(
+                callback_url=f"{URL_PREFIX}/auth/microsoft_callback",
+                login_hint=email["email"],
+                domain_hint=email["domain"],
+            )
+            if "error" in mr and mr["error"] == False and "url" in mr:
+                session["microsoft_state"] = mr["state"]
+                session["microsoft_nonce"] = mr["nonce"]
+                return redirect(mr["url"])
+            else:
+                return returnError(403)
+
+        # if not Microsoft or Google, then fallback to email code
+
+        code = random_string(9, True).lower()
+        pretty_code = f"{code[:3]}-{code[3:6]}-{code[6:]}"
+
+        sub = sso_oidc.write_user_sub(email=email["email"])
+        session["sub"] = sub
+        user_attributes = sso_oidc.get_subs_attributes(
+            sub,
+            attributes=["display_name", "sms_number"],
+            set_attribute_none=True,
+        )
+
+        if user_attributes["sms_number"] and len(user_attributes["sms_number"]) > 1:
+            session["sms_auth_required"] = True
         else:
-            email = email_parts(params["email"])
+            session["sms_auth_required"] = False
 
-            ve = valid_email(email, debug=DEBUG)
-            if not ve["valid"]:
-                jprint("signin: email_verified is false", {"email": email})
-                return return_sign_in(is_error=True)
-
-            auth_type = ve["auth_type"]
-
-            if ve["user_type"] is not None:
-                if ve["user_type"] != "user":
-                    return returnError(403)
-
-                session["email"] = email
-
-                remember_me = False
-                if "remember_me" in params:
-                    if str(params["remember_me"]).lower() == "true":
-                        remember_me = True
-                session["remember_me"] = remember_me
-
-                force_email = False
-                if "force_email" in session:
-                    force_email = session["force_email"]
-                    session.pop("force_email", None)
-
-                if not force_email and ga and auth_type == "google":
-                    gr = ga.step_one_get_redirect_url(
-                        callback_url=f"{URL_PREFIX}/auth/google_callback",
-                        login_hint=email["email"],
-                        hd_domain_hint=email["domain"],
-                    )
-                    if "error" in gr and gr["error"] == False and "url" in gr:
-                        session["google_state"] = gr["state"]
-                        session["google_nonce"] = gr["nonce"]
-                        return redirect(gr["url"])
-                    else:
-                        return returnError(403)
-
-                if not force_email and ma and auth_type == "microsoft":
-                    mr = ma.step_one_get_redirect_url(
-                        callback_url=f"{URL_PREFIX}/auth/microsoft_callback",
-                        login_hint=email["email"],
-                        domain_hint=email["domain"],
-                    )
-                    if "error" in mr and mr["error"] == False and "url" in mr:
-                        session["microsoft_state"] = mr["state"]
-                        session["microsoft_nonce"] = mr["nonce"]
-                        return redirect(mr["url"])
-                    else:
-                        return returnError(403)
-
-                code = random_string(9, True).lower()
-                pretty_code = f"{code[:3]}-{code[3:6]}-{code[6:]}"
-
-                sub = sso_oidc.write_user_sub(email=email["email"])
-                session["sub"] = sub
-                user_attributes = sso_oidc.get_subs_attributes(
-                    sub,
-                    attributes=["display_name", "sms_number"],
-                    set_attribute_none=True,
+        if USE_NOTIFY:
+            try:
+                response = notifications_client.send_email_notification(
+                    email_address=email["email"],
+                    template_id=env_var("NOTIFY_EMAIL_AUTH_CODE_TEMPLATE"),
+                    personalisation={
+                        "auth_code": pretty_code,
+                        "display_name": user_attributes["display_name"]
+                        if "display_name" in user_attributes
+                        and user_attributes["display_name"]
+                        else session["email"]["email"],
+                        "obfuscated_ip ": (".".join(c_ip.split(".")[:-1]) + ".*")
+                        if "." in c_ip
+                        else (":".join(c_ip.split(":")[:-1]) + ":*")
+                        if ":" in c_ip
+                        else "Unknown",
+                        "country": request.headers["cloudfront-viewer-country-name"]
+                        if "cloudfront-viewer-country-name" in request.headers
+                        else "Unknown",
+                        "domain": DOMAIN,
+                        "browser_guess": guess_browser(
+                            request.headers["true-user-agent"]
+                            if "true-user-agent" in request.headers
+                            else (
+                                request.headers["User-Agent"]
+                                if "User-Agent" in request.headers
+                                else ""
+                            )
+                        ),
+                    },
                 )
+            except Exception as e:
+                jprint({"error": e, "Error": traceback.format_exc()})
+                return returnError(500)
 
-                if (
-                    user_attributes["sms_number"]
-                    and len(user_attributes["sms_number"]) > 1
-                ):
-                    session["sms_auth_required"] = True
-                else:
-                    session["sms_auth_required"] = False
+        session["email-sign-in-code"] = code
 
-                if USE_NOTIFY:
-                    try:
-                        response = notifications_client.send_email_notification(
-                            email_address=email["email"],
-                            template_id=env_var("NOTIFY_EMAIL_AUTH_CODE_TEMPLATE"),
-                            personalisation={
-                                "auth_code": pretty_code,
-                                "display_name": user_attributes["display_name"]
-                                if "display_name" in user_attributes
-                                and user_attributes["display_name"]
-                                else session["email"]["email"],
-                                "obfuscated_ip ": (
-                                    ".".join(c_ip.split(".")[:-1]) + ".*"
-                                )
-                                if "." in c_ip
-                                else (":".join(c_ip.split(":")[:-1]) + ":*")
-                                if ":" in c_ip
-                                else "Unknown",
-                                "country": request.headers[
-                                    "cloudfront-viewer-country-name"
-                                ]
-                                if "cloudfront-viewer-country-name" in request.headers
-                                else "Unknown",
-                                "domain": DOMAIN,
-                                "browser_guess": guess_browser(
-                                    request.headers["true-user-agent"]
-                                    if "true-user-agent" in request.headers
-                                    else (
-                                        request.headers["User-Agent"]
-                                        if "User-Agent" in request.headers
-                                        else ""
-                                    )
-                                ),
-                            },
-                        )
-                    except Exception as e:
-                        jprint({"error": e, "Error": traceback.format_exc()})
-                        return returnError(500)
+        jprint(
+            {
+                "email": session["email"]["email"]
+                if "email" in session and "email" in session["email"]
+                else "",
+                "client_ip": c_ip,
+                "action": "sign-in-request-email",
+                "pretty_code": pretty_code,
+                "browser_cookie_value": browser_cookie_value,
+            }
+        )
+        # end code verification
 
-                session["email-sign-in-code"] = code
+    user_attributes = {}
+    if "sub" in session:
+        user_attributes = sso_oidc.get_subs_attributes(
+            session["sub"],
+            attributes=["display_name", "sms_number"],
+            set_attribute_none=True,
+        )
 
+    if "code" in params:
+        code = params["code"].lower().replace("-", "").strip()
+        code_type = params["code_type"]
+        if code_type not in ["email", "phone"]:
+            return returnError(403)
+
+        sms_auth_required = False
+        if "sms_auth_required" in session and session["sms_auth_required"]:
+            sms_auth_required = session["sms_auth_required"]
+
+        if code_type == "phone" and "sms-sign-in-code" in session:
+            if code != session["sms-sign-in-code"]:
                 jprint(
                     {
                         "email": session["email"]["email"]
                         if "email" in session and "email" in session["email"]
                         else "",
-                        "client_ip": c_ip,
-                        "action": "sign-in-request-email",
-                        "pretty_code": pretty_code,
+                        "client_ip": client_ip(),
+                        "action": "code-fail",
                         "browser_cookie_value": browser_cookie_value,
                     }
                 )
+                return return_sign_in(is_code=True, code_type="phone", code_fail=True)
+            else:
+                if (
+                    "email-sign-in-complete" in session
+                    and session["email-sign-in-complete"]
+                ):
+                    session.pop("email-sign-in-complete")
+                    session.pop("sms-sign-in-code")
+                    session["mfa_quality"] = FactorQuality.medium
+                    signed_in = True
+                else:
+                    return redirect("/sign-in")
 
-        user_attributes = {}
-        if "sub" in session:
-            user_attributes = sso_oidc.get_subs_attributes(
-                session["sub"],
-                attributes=["display_name", "sms_number"],
-                set_attribute_none=True,
-            )
-
-        if "code" in params:
-            code = params["code"].lower().replace("-", "").strip()
-            code_type = params["code_type"]
-            if code_type not in ["email", "phone"]:
-                return returnError(403)
-
-            signed_in = False
-
-            sms_auth_required = False
-            if "sms_auth_required" in session and session["sms_auth_required"]:
-                sms_auth_required = session["sms_auth_required"]
-
-            if code_type == "phone" and "sms-sign-in-code" in session:
-                if code.replace("-", "").strip() != session["sms-sign-in-code"]:
-                    jprint(
+        if code_type == "email":
+            if code != session["email-sign-in-code"]:
+                jprint(
+                    json.dumps(
                         {
+                            "code": code,
+                            "email-sign-in-code": session["email-sign-in-code"],
                             "email": session["email"]["email"]
                             if "email" in session and "email" in session["email"]
                             else "",
                             "client_ip": client_ip(),
                             "action": "code-fail",
                             "browser_cookie_value": browser_cookie_value,
-                        }
+                        },
+                        default=str,
                     )
-                    return return_sign_in(
-                        is_code=True, code_type="phone", code_fail=True
-                    )
+                )
+                return return_sign_in(is_code=True, code_type="email", code_fail=True)
+            else:
+                session.pop("email-sign-in-code")
+                session["email-sign-in-complete"] = True
+                session["mfa_quality"] = FactorQuality.none
+                session["pf_quality"] = FactorQuality.medium
+
+                if not sms_auth_required:
+                    signed_in = True
                 else:
                     if (
-                        "email-sign-in-complete" in session
-                        and session["email-sign-in-complete"]
+                        "sms_number" not in user_attributes
+                        or not user_attributes["sms_number"]
                     ):
-                        session.pop("email-sign-in-complete")
-                        session.pop("sms-sign-in-code")
-                        session["mfa_quality"] = FactorQuality.medium
-                        signed_in = True
-                    else:
                         return redirect("/sign-in")
 
-            if code_type == "email":
-                if code != session["email-sign-in-code"]:
+                    code = random_string(6, only_numbers=True)
+                    pretty_code = f"{code[:3]}-{code[3:6]}"
+
+                    if USE_NOTIFY:
+                        try:
+                            response = notifications_client.send_sms_notification(
+                                phone_number=user_attributes["sms_number"],
+                                template_id=env_var("NOTIFY_SMS_AUTH_CODE_TEMPLATE"),
+                                personalisation={
+                                    "sms_auth_code": pretty_code,
+                                    "display_name": user_attributes["display_name"]
+                                    if "display_name" in user_attributes
+                                    and user_attributes["display_name"]
+                                    else session["email"]["email"],
+                                },
+                            )
+                        except Exception as e:
+                            jprint({"error": e, "Error": traceback.format_exc()})
+                            return returnError(500)
+
+                    session["sms-sign-in-code"] = code
+
                     jprint(
-                        json.dumps(
-                            {
-                                "code": code,
-                                "email-sign-in-code": session["email-sign-in-code"],
-                                "email": session["email"]["email"]
-                                if "email" in session and "email" in session["email"]
-                                else "",
-                                "client_ip": client_ip(),
-                                "action": "code-fail",
-                                "browser_cookie_value": browser_cookie_value,
-                            },
-                            default=str,
-                        )
+                        {
+                            "email": session["email"]["email"]
+                            if "email" in session and "email" in session["email"]
+                            else "",
+                            "client_ip": c_ip,
+                            "action": "sign-in-request-sms",
+                            "sms_number": user_attributes["sms_number"],
+                            "pretty_code": pretty_code,
+                            "browser_cookie_value": browser_cookie_value,
+                        }
                     )
+
                     return return_sign_in(
-                        is_code=True, code_type="email", code_fail=True
+                        is_code=True, code_type="phone", code_fail=code_fail
                     )
-                else:
-                    session.pop("email-sign-in-code")
-                    session["email-sign-in-complete"] = True
-                    session["mfa_quality"] = FactorQuality.none
-                    session["pf_quality"] = FactorQuality.medium
 
-                    if not sms_auth_required:
-                        signed_in = True
-                    else:
-                        if (
-                            "sms_number" not in user_attributes
-                            or not user_attributes["sms_number"]
-                        ):
-                            return redirect("/sign-in")
+    if signed_in or ("signed_in" in session and session["signed_in"]):
+        session.permanent = True
+        session["signed_in"] = True
+        session["display_name"] = (
+            user_attributes["display_name"]
+            if "display_name" in user_attributes and user_attributes["display_name"]
+            else None
+        )
 
-                        code = random_string(6, only_numbers=True)
-                        pretty_code = f"{code[:3]}-{code[3:6]}"
+        jprint(
+            {
+                "sub": session["sub"],
+                "email": session["email"]["email"]
+                if "email" in session and "email" in session["email"]
+                else "",
+                "client_ip": client_ip(),
+                "action": "sign-in-successful",
+                "browser_cookie_value": browser_cookie_value,
+            }
+        )
 
-                        if USE_NOTIFY:
-                            try:
-                                response = notifications_client.send_sms_notification(
-                                    phone_number=user_attributes["sms_number"],
-                                    template_id=env_var(
-                                        "NOTIFY_SMS_AUTH_CODE_TEMPLATE"
-                                    ),
-                                    personalisation={
-                                        "sms_auth_code": pretty_code,
-                                        "display_name": user_attributes["display_name"]
-                                        if "display_name" in user_attributes
-                                        and user_attributes["display_name"]
-                                        else session["email"]["email"],
-                                    },
-                                )
-                            except Exception as e:
-                                jprint({"error": e, "Error": traceback.format_exc()})
-                                return returnError(500)
+        redirect_url = "/dashboard"
+        to_app = get_request_val(
+            "to_app",
+            use_posted_data=True,
+            use_querystrings=True,
+            use_session=True,
+        )
+        if to_app:
+            if sso_oidc.is_client(to_app):
+                redirect_url = "/auth/oidc"
 
-                        session["sms-sign-in-code"] = code
+        return config_remember_me_cookie(
+            session["email"]["email"], redirect(redirect_url)
+        )
 
-                        jprint(
-                            {
-                                "email": session["email"]["email"]
-                                if "email" in session and "email" in session["email"]
-                                else "",
-                                "client_ip": c_ip,
-                                "action": "sign-in-request-sms",
-                                "sms_number": user_attributes["sms_number"],
-                                "pretty_code": pretty_code,
-                                "browser_cookie_value": browser_cookie_value,
-                            }
-                        )
-
-                        return return_sign_in(
-                            is_code=True, code_type="phone", code_fail=code_fail
-                        )
-
-            if signed_in:
-                session.permanent = True
-                session["signed_in"] = True
-                session["display_name"] = (
-                    user_attributes["display_name"]
-                    if "display_name" in user_attributes
-                    and user_attributes["display_name"]
-                    else None
-                )
-
-                jprint(
-                    {
-                        "sub": session["sub"],
-                        "email": session["email"]["email"]
-                        if "email" in session and "email" in session["email"]
-                        else "",
-                        "client_ip": client_ip(),
-                        "action": "sign-in-successful",
-                        "browser_cookie_value": browser_cookie_value,
-                    }
-                )
-
-                redirect_url = "/dashboard"
-                to_app = get_request_val(
-                    "to_app",
-                    use_posted_data=True,
-                    use_querystrings=True,
-                    use_session=True,
-                )
-                if to_app:
-                    if sso_oidc.is_client(to_app):
-                        redirect_url = "/auth/oidc"
-
-                return config_remember_me_cookie(
-                    session["email"]["email"], redirect(redirect_url)
-                )
-
-        return return_sign_in(is_code=True, code_fail=code_fail)
+    # shouldn't get to here
+    return redirect("/sign-in")
 
 
 def return_sign_in(
