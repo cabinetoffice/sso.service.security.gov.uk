@@ -4,7 +4,12 @@ from flask import (
     redirect,
 )
 from functools import wraps
-from sso_utils import random_string
+from sso_utils import env_var, random_string, jprint
+
+
+ENVIRONMENT = env_var("ENVIRONMENT", "development")
+IS_PROD = ENVIRONMENT.lower().startswith("prod")
+DEBUG = not IS_PROD
 
 
 def get_csrf_session(override_endpoint: str = None):
@@ -59,6 +64,8 @@ def UserAlreadySignedIn(f):
 def UserShouldBeSignedIn(f):
     @wraps(f)
     def wrap(*args, **kwds):
+        if DEBUG:
+            jprint({"session": session})
         if "signed_in" in session and session["signed_in"]:
             return f(*args, **kwds)
         session.clear()

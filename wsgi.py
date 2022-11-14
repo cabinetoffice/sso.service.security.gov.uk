@@ -682,11 +682,15 @@ def google_callback():
             id_token = gr["id_token"]
 
             if not id_token["email_verified"]:
+                jprint("google_callback: email_verified is false", {"email": email})
                 return return_sign_in(is_error=True)
 
             email = email_parts(id_token["email"])
             ve = valid_email(email, debug=DEBUG)
             if not ve["valid"]:
+                jprint(
+                    "google_callback: valid_email returned invalid", {"email": email}
+                )
                 return return_sign_in(is_error=True)
 
             sub = sso_oidc.write_user_sub(
@@ -1246,12 +1250,14 @@ def signin():
             use_posted_data=True,
         )
         if "email" not in params or not params["email"]:
+            jprint("signin: email not in params", {"params": params})
             return return_sign_in(is_error=True)
         else:
             email = email_parts(params["email"])
 
             ve = valid_email(email, debug=DEBUG)
             if not ve["valid"]:
+                jprint("signin: email_verified is false", {"email": email})
                 return return_sign_in(is_error=True)
 
             auth_type = ve["auth_type"]
