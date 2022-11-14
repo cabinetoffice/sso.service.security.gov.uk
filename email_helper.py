@@ -1,7 +1,7 @@
 import re
 
 
-def email_parts(email: str) -> dict:
+def email_parts(email) -> dict:
     """
     Returns the search keys from a given email address as a list (in priority order)
 
@@ -33,11 +33,23 @@ def email_parts(email: str) -> dict:
     {'identifier': 'url_encoded', 'with_plus': 'url_encoded', 'domain': 'this-could-be-bad.com', 'email': 'url_encoded@this-could-be-bad.com', 'email_with_plus': 'url_encoded@this-could-be-bad.com'}
     """
 
-    email = email.strip().lower()
+    if type(email) == list:
+        for le in email:
+            if type(le) == str and "@" in le:
+                email = le
+                break
+
+    if type(email) == dict:
+        if "email" in email and "@" in email["email"]:
+            email = email["email"]
+
+    if type(email) != str:
+        email = None
 
     res = {}
 
     if email:
+        email = email.strip().lower()
         x = re.search("^(?P<identifier>.*)(\@|%40)(?P<domain>.*\..*)$", email)
         if x:
             identifiers = extractIdentifiers(x.group("identifier"))
