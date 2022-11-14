@@ -538,9 +538,6 @@ def microsoft_callback():
             and "error_message" in mr
             and "login_required" in mr["error_message"]
         ):
-            print(
-                "ERROR login_required " * 5,
-            )
             if "microsoft_retry" not in session or not session["microsoft_retry"]:
                 session.pop("microsoft_retry", None)
                 email = session["email"]
@@ -665,10 +662,11 @@ def google_callback():
         session.pop("google_state", None)
 
         if (
-            "error" in gr
-            and gr["error"]
-            and "error_message" in gr
-            and "interaction_required" in gr["error_message"]
+            "error" in gr and gr["error"] and "interaction_required" in gr["error"]
+        ) or (
+            "error_subtype" in gr
+            and gr["error_subtype"]
+            and "access_denied" in gr["error_subtype"]
         ):
             if "google_retry" not in session or not session["google_retry"]:
                 session.pop("google_retry", None)
@@ -688,14 +686,22 @@ def google_callback():
                     return returnError(403)
 
         if "error" in gr and gr["error"]:
-            return returnError(403)
+            return return_sign_in(
+                is_error=True,
+                fail_message="Google account sign in failed, please continue to try again with an email code",
+                force_email=True,
+            )
 
         if "id_token" in gr:
             id_token = gr["id_token"]
 
             if not id_token["email_verified"]:
                 jprint("google_callback: email_verified is false", {"email": email})
-                return return_sign_in(is_error=True)
+                return return_sign_in(
+                    is_error=True,
+                    fail_message="Google account sign in failed, please continue to try again with an email code",
+                    force_email=True,
+                )
 
             email = email_parts(id_token["email"])
             ve = valid_email(email, debug=DEBUG)
@@ -703,7 +709,11 @@ def google_callback():
                 jprint(
                     "google_callback: valid_email returned invalid", {"email": email}
                 )
-                return return_sign_in(is_error=True)
+                return return_sign_in(
+                    is_error=True,
+                    fail_message="Google account sign in failed, please continue to try again with an email code",
+                    force_email=True,
+                )
 
             sub = sso_oidc.write_user_sub(
                 google_sub=id_token["sub"], email=email["email"]
