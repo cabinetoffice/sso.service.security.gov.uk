@@ -143,7 +143,6 @@ def client_ip():
 
 def search_request_values(res: dict, search: dict, find: str):
     k, v = (None, None)
-
     d = dict(search) if search else {}
     for key in d:
         nkey = key.lower().strip()
@@ -154,7 +153,6 @@ def search_request_values(res: dict, search: dict, find: str):
             else:
                 k, v = (find, [val])
             break
-
     if k:
         if k not in res:
             res[k] = []
@@ -259,11 +257,12 @@ def get_request_vals(
                 "use_querystrings": use_querystrings,
                 "use_session": use_session,
                 "return_first": return_first,
+                "session_dict": dict(session),
             }
         )
 
     return {
-        k: (res[k][0] if len(res[k]) == 1 else ",".join(res[k]))
+        k: (res[k][0] if len(res[k]) == 1 else res[k])
         if type(res[k]) == list
         else res[k]
         for k in res
