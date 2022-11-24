@@ -100,6 +100,9 @@ def get_user_by_auth_code(client_id: str, client_secret: str, auth_code: str) ->
                         res["mfa_quality"] = (
                             jac["mfa_quality"] if "mfa_quality" in jac else None
                         )
+                        res["nonce"] = (
+                            jac["nonce"] if "nonce" in jac else None
+                        )
         except Exception as e:
             jprint("get_user_by_auth_code:", e)
 
@@ -147,6 +150,7 @@ def generate_id_token(
     scopes: list = ["openid"],
     pf_quality: FactorQuality = FactorQuality.none,
     mfa_quality: FactorQuality = FactorQuality.none,
+    nonce: str = None,
     time_now: int = int(time.time()),
 ):
     id_token = None
@@ -156,6 +160,9 @@ def generate_id_token(
 
     sub = user["sub"]
     email = user["email"]
+
+    if nonce is None and "nonce" in user:
+        nonce = user["nonce"]
 
     pfq = FactorQuality.get(pf_quality)
     mfq = FactorQuality.get(mfa_quality)
@@ -170,6 +177,7 @@ def generate_id_token(
         "pf_quality": pfq.name,
         "mfa_quality": mfq.name,
         "auth_quality": aq.name,
+        "nonce": nonce,
     }
 
     # mfa quality: none, low, medium, high
@@ -220,6 +228,7 @@ def create_auth_code(
     scopes: list = [],
     pf_quality: str = None,
     mfa_quality: str = None,
+    nonce: str = None,
 ) -> str:
     gus = get_user_sub(sub=sub)
     clients = get_clients()
@@ -241,6 +250,7 @@ def create_auth_code(
                         "scopes": scopes,
                         "pf_quality": pf_quality,
                         "mfa_quality": mfa_quality,
+                        "nonce": nonce,
                     }
                 ),
             )
@@ -274,6 +284,9 @@ def get_user_by_access_code(access_code: str) -> dict:
                     res["mfa_quality"] = (
                         jac["mfa_quality"] if "mfa_quality" in jac else None
                     )
+                    res["nonce"] = (
+                        jac["nonce"] if "nonce" in jac else None
+                    )
     except Exception as e:
         jprint("get_user_by_access_code:", e)
 
@@ -306,7 +319,11 @@ def delete_access_code(access_code: str) -> bool:
 
 
 def create_access_code(
-    sub: str, scopes: list = [], pf_quality: str = None, mfa_quality: str = None
+    sub: str,
+    scopes: list = [],
+    pf_quality: str = None,
+    mfa_quality: str = None,
+    nonce: str = None,
 ) -> str:
     gus = get_user_sub(sub=sub)
     if "email" in gus:
@@ -328,6 +345,7 @@ def create_access_code(
                         "scopes": scopes,
                         "pf_quality": pf_quality,
                         "mfa_quality": mfa_quality,
+                        "nonce": nonce,
                     }
                 ),
             )

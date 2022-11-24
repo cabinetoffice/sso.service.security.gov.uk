@@ -895,8 +895,9 @@ def auth_oidc():
     if tmp_state:
         session["oidc_state"] = tmp_state
 
+    session["oidc_nonce"] = None
     tmp_nonce = get_request_val(
-        "state",
+        "nonce",
         use_session=True,
         use_querystrings=True,
         use_posted_data=True,
@@ -958,6 +959,7 @@ def auth_oidc():
                 session["oidc_scope"],
                 session["pf_quality"],
                 session["mfa_quality"],
+                nonce=session["oidc_nonce"],
             )
 
         access_token = None
@@ -967,6 +969,7 @@ def auth_oidc():
                 session["oidc_scope"],
                 session["pf_quality"],
                 session["mfa_quality"],
+                nonce=session["oidc_nonce"],
             )
 
         id_token = None
@@ -977,6 +980,7 @@ def auth_oidc():
                 session["oidc_scope"],
                 session["pf_quality"],
                 session["mfa_quality"],
+                nonce=session["oidc_nonce"],
             )
 
         redirect_string = tmp_redirect_url
