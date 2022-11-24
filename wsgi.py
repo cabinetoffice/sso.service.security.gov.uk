@@ -351,11 +351,22 @@ def oidc_config():
 
 @app.route("/auth/token", methods=["GET", "POST"])
 def auth_token():
-    keys = ["client_id", "client_secret", "code"]
+    required_keys = ["client_id", "client_secret", "code"]
+    keys = ["client_id", "client_secret", "code", "authorization"]
     params = get_request_vals(
         *keys, use_querystrings=True, use_posted_data=True, use_headers=True
     )
-    for k in keys:
+
+    if "client_id" not in params and "authorization" in params and "Basic " in params["authorization"]:
+        b64 = params["authorization"].split(" ")[1]
+        if b64:
+            athz = base64.b64decode(b64).decode('utf-8')
+            if athz and ":" in athz:
+                client_creds = athz.split(":", 1)
+                params["client_id"] = client_creds[0]
+                params["client_secret"] = client_creds[1]
+
+    for k in required_keys:
         value = params.get(k)
         if not value:
             jprint(
