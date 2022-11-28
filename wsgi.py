@@ -1015,6 +1015,11 @@ def auth_oidc():
                     else None
                 ),
                 jwt_secret=(client["jwt_secret"] if "jwt_secret" in client else None),
+                unique_request_id=(
+                    client["jwt_unique_request_id"]
+                    if "jwt_unique_request_id" in client
+                    else False
+                ),
             )
 
         if "redirect_url_override" in client and client["redirect_url_override"]:

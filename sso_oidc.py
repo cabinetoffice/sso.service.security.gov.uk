@@ -153,6 +153,7 @@ def generate_id_token(
     jwt_attributes: dict = None,
     jwt_algorithm_override: str = None,
     jwt_secret: str = None,
+    unique_request_id: bool = False,
 ):
     id_token = None
 
@@ -183,6 +184,9 @@ def generate_id_token(
 
     # mfa quality: none, low, medium, high
     # https://www.gov.uk/government/publications/authentication-credentials-for-online-government-services/giving-users-access-to-online-services
+
+    if unique_request_id:
+        payload["unique_request_id"] = secrets.token_hex(nbytes=32)
 
     if "email" in scopes:
         payload["email"] = email
