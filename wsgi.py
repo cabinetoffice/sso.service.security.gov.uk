@@ -357,10 +357,14 @@ def auth_token():
         *keys, use_querystrings=True, use_posted_data=True, use_headers=True
     )
 
-    if "client_id" not in params and "authorization" in params and "Basic " in params["authorization"]:
+    if (
+        "client_id" not in params
+        and "authorization" in params
+        and "Basic " in params["authorization"]
+    ):
         b64 = params["authorization"].split(" ")[1]
         if b64:
-            athz = base64.b64decode(b64).decode('utf-8')
+            athz = base64.b64decode(b64).decode("utf-8")
             if athz and ":" in athz:
                 client_creds = athz.split(":", 1)
                 params["client_id"] = client_creds[0]
@@ -797,19 +801,39 @@ def auth_oidc():
     tmp_response_types = None
     tmp_response_mode = None
 
-    client = {"ok": False}
-
     tmp_is_code = False
     tmp_is_token = False
     tmp_is_id_token = False
 
-    tmp_response_types = get_request_val(
-        "response_type",
-        "oidc_response_types",
+    client = {"ok": False}
+
+    tmp_client_id = get_request_val(
+        "client_id",
+        "oidc_client_id",
         use_session=True,
         use_querystrings=True,
         use_posted_data=True,
     )
+
+    tmp_implicit_jwt = False
+
+    if tmp_client_id:
+        client = sso_oidc.get_client(tmp_client_id)
+        if not client["ok"]:
+            return redirect("/error?type=client-id-unknown")
+        if "implicit_jwt" in client:
+            tmp_implicit_jwt = client["implicit_jwt"]
+
+    if tmp_implicit_jwt:
+        tmp_response_types = "id_token"
+    else:
+        tmp_response_types = get_request_val(
+            "response_type",
+            "oidc_response_types",
+            use_session=True,
+            use_querystrings=True,
+            use_posted_data=True,
+        )
 
     if tmp_response_types:
         if "code" in tmp_response_types:
@@ -822,31 +846,28 @@ def auth_oidc():
     if not tmp_is_code and not tmp_is_token and not tmp_is_id_token:
         return redirect("/error?type=response_type-not-set")
 
-    tmp_response_mode = get_request_val(
-        "response_mode",
-        "oidc_response_mode",
-        use_session=True,
-        use_querystrings=True,
-        use_posted_data=True,
-    )
+    if "response_mode" in client and client["response_mode"]:
+        tmp_response_mode = client["response_mode"]
+    else:
+        tmp_response_mode = get_request_val(
+            "response_mode",
+            "oidc_response_mode",
+            use_session=True,
+            use_querystrings=True,
+            use_posted_data=True,
+        )
 
     tmp_form_resp = tmp_response_mode and tmp_response_mode == "form_post"
+    tmp_uri_get_resp = tmp_response_mode and tmp_response_mode == "uri_get"
 
-    tmp_client_id = get_request_val(
-        "client_id",
-        "oidc_client_id",
-        use_session=True,
-        use_querystrings=True,
-        use_posted_data=True,
-    )
+    if client["ok"]:
 
-    if tmp_client_id:
-        client = sso_oidc.get_client(tmp_client_id)
-        if not client["ok"]:
-            return redirect("/error?type=client-id-unknown")
+        redirect_url_attribute = "redirect_uri"
+        if "redirect_uri_override" in client and client["redirect_uri_override"]:
+            redirect_url_attribute = client["redirect_uri_override"]
 
         raw_redirect_url = get_request_val(
-            "redirect_uri",
+            redirect_url_attribute,
             "oidc_redirect_uri",
             use_session=True,
             use_querystrings=True,
@@ -876,16 +897,20 @@ def auth_oidc():
         session["oidc_response_mode"] = tmp_response_mode
         session["oidc_response_types"] = tmp_response_types
 
-    tmp_scope = get_request_val(
-        "scope",
-        "oidc_scope",
-        use_session=True,
-        use_querystrings=True,
-        use_posted_data=True,
-    )
+    if "scope_override" in client and client["scope_override"]:
+        tmp_scope = client["scope_override"]
+    else:
+        tmp_scope = get_request_val(
+            "scope",
+            "oidc_scope",
+            use_session=True,
+            use_querystrings=True,
+            use_posted_data=True,
+        )
     if tmp_scope:
         session["oidc_scope"] = sso_oidc.sanitise_scopes(tmp_scope)
 
+    session["oidc_state"] = None
     tmp_state = get_request_val(
         "state",
         use_session=True,
@@ -981,17 +1006,29 @@ def auth_oidc():
                 session["pf_quality"],
                 session["mfa_quality"],
                 nonce=session["oidc_nonce"],
+                jwt_attibutes=(
+                    client["jwt_attributes"] if "jwt_attributes" in client else None
+                ),
             )
 
-        redirect_string = tmp_redirect_url
-        redirect_string += "?" if "?" not in tmp_redirect_url else "&"
+        if "redirect_url_override" in client and client["redirect_url_override"]:
+            redirect_string = client["redirect_url_override"]
+        else:
+            redirect_string = tmp_redirect_url
+            redirect_string += "?" if "?" not in tmp_redirect_url else "&"
 
         if auth_code:
             redirect_string += f"code={auth_code}&"
         if access_token:
             redirect_string += f"token={access_token}&"
         if id_token:
-            redirect_string += f"id_token={id_token}&"
+            itq = "id_token"
+            if (
+                "id_token_querystring_override" in client
+                and client["id_token_querystring_override"]
+            ):
+                itq = client["id_token_querystring_override"]
+            redirect_string += f"{itq}={id_token}&"
 
         if "oidc_state" in session:
             redirect_string += f"state={session['oidc_state']}"

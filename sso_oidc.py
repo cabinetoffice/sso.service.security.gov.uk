@@ -100,9 +100,7 @@ def get_user_by_auth_code(client_id: str, client_secret: str, auth_code: str) ->
                         res["mfa_quality"] = (
                             jac["mfa_quality"] if "mfa_quality" in jac else None
                         )
-                        res["nonce"] = (
-                            jac["nonce"] if "nonce" in jac else None
-                        )
+                        res["nonce"] = jac["nonce"] if "nonce" in jac else None
         except Exception as e:
             jprint("get_user_by_auth_code:", e)
 
@@ -152,6 +150,7 @@ def generate_id_token(
     mfa_quality: FactorQuality = FactorQuality.none,
     nonce: str = None,
     time_now: int = int(time.time()),
+    jwt_attributes: dict = None,
 ):
     id_token = None
 
@@ -196,6 +195,13 @@ def generate_id_token(
             dn = user["attributes"]["display_name"]
         payload["display_name"] = dn
         payload["nickname"] = dn
+
+    if jwt_attributes:
+        for ja in jwt_attributes:
+            jv = jwt_attributes[ja]
+            if jv in payload and ja not in payload:
+                payload[ja] = payload[jv]
+                payload.pop(jv, None)
 
     id_token = jwt_signing.sign(payload, kid=CURRENT_SIGNING_KID)
 
@@ -284,9 +290,7 @@ def get_user_by_access_code(access_code: str) -> dict:
                     res["mfa_quality"] = (
                         jac["mfa_quality"] if "mfa_quality" in jac else None
                     )
-                    res["nonce"] = (
-                        jac["nonce"] if "nonce" in jac else None
-                    )
+                    res["nonce"] = jac["nonce"] if "nonce" in jac else None
     except Exception as e:
         jprint("get_user_by_access_code:", e)
 
