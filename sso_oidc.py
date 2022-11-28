@@ -151,6 +151,8 @@ def generate_id_token(
     nonce: str = None,
     time_now: int = int(time.time()),
     jwt_attributes: dict = None,
+    jwt_algorithm_override: str = None,
+    jwt_secret: str = None,
 ):
     id_token = None
 
@@ -203,7 +205,11 @@ def generate_id_token(
                 payload[ja] = payload[jv]
                 payload.pop(jv, None)
 
-    id_token = jwt_signing.sign(payload, kid=CURRENT_SIGNING_KID)
+    if jwt_algorithm_override and jwt_algorithm_override.upper() == "HS256":
+        if jwt_secret:
+            id_token = jwt_signing.hash(payload, jwt_secret, jwt_algorithm_override)
+    else:
+        id_token = jwt_signing.sign(payload, kid=CURRENT_SIGNING_KID)
 
     return id_token
 

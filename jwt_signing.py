@@ -1,6 +1,7 @@
 import boto3
 import base64
 import json
+import jwt
 
 from sso_utils import env_var
 
@@ -85,7 +86,7 @@ def sign(payload: dict, kid: str, sigtype: str = "RSA", bits: int = 256) -> str:
     header_base64 = jwt_safe_b64(str.encode(json.dumps(header)))
     payload_base64 = jwt_safe_b64(str.encode(json.dumps(payload)))
 
-    jwt = f"{header_base64}.{payload_base64}"
+    jwt_message = f"{header_base64}.{payload_base64}"
 
     response = {}
 
@@ -93,7 +94,7 @@ def sign(payload: dict, kid: str, sigtype: str = "RSA", bits: int = 256) -> str:
         client = boto3.client("kms", region_name=AWS_REGION)
         response = client.sign(
             KeyId=kid,
-            Message=jwt,
+            Message=jwt_message,
             MessageType="RAW",
             SigningAlgorithm=SigningAlgorithm,
         )
@@ -102,7 +103,7 @@ def sign(payload: dict, kid: str, sigtype: str = "RSA", bits: int = 256) -> str:
         from Crypto.Signature.pkcs1_15 import PKCS115_SigScheme
         from Crypto.Hash import SHA256
 
-        hash = SHA256.new(jwt.encode("utf-8"))
+        hash = SHA256.new(jwt_message.encode("utf-8"))
         pks = get_private_keys()
         if kid in pks:
             keypair = RSA.import_key(pks[kid])
@@ -118,6 +119,13 @@ def sign(payload: dict, kid: str, sigtype: str = "RSA", bits: int = 256) -> str:
 
         sig = jwt_safe_b64(response["Signature"])
 
-        return f"{jwt}.{sig}"
+        return f"{jwt_message}.{sig}"
 
     return None
+
+
+def hash(payload: dict, key: str, algorithm: str = "HS256") -> str:
+    if not payload:
+        return None
+
+    return jwt.encode(payload, key, algorithm=algorithm)

@@ -1006,9 +1006,15 @@ def auth_oidc():
                 session["pf_quality"],
                 session["mfa_quality"],
                 nonce=session["oidc_nonce"],
-                jwt_attibutes=(
+                jwt_attributes=(
                     client["jwt_attributes"] if "jwt_attributes" in client else None
                 ),
+                jwt_algorithm_override=(
+                    client["jwt_algorithm_override"]
+                    if "jwt_algorithm_override" in client
+                    else None
+                ),
+                jwt_secret=(client["jwt_secret"] if "jwt_secret" in client else None),
             )
 
         if "redirect_url_override" in client and client["redirect_url_override"]:
