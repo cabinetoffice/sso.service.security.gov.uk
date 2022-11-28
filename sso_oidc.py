@@ -149,7 +149,7 @@ def generate_id_token(
     pf_quality: FactorQuality = FactorQuality.none,
     mfa_quality: FactorQuality = FactorQuality.none,
     nonce: str = None,
-    time_now: int = int(time.time()),
+    time_now: int = None,
     jwt_attributes: dict = None,
     jwt_algorithm_override: str = None,
     jwt_secret: str = None,
@@ -158,6 +158,9 @@ def generate_id_token(
     id_token = None
 
     expiry = 3600
+
+    if time_now is None:
+        time_now = int(time.time())
     exp_time = time_now + expiry
 
     sub = user["sub"]
@@ -199,6 +202,8 @@ def generate_id_token(
         dn = None
         if "attributes" in user and "display_name" in user["attributes"]:
             dn = user["attributes"]["display_name"]
+        else:
+            dn = email.split("@", 1)[0].replace(".", " ").title()
         payload["display_name"] = dn
         payload["nickname"] = dn
 
