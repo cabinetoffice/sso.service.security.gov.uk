@@ -913,10 +913,12 @@ def auth_oidc():
     session["oidc_state"] = None
     tmp_state = get_request_val(
         "state",
-        use_session=True,
+        use_session=False,
         use_querystrings=True,
         use_posted_data=True,
     )
+    if not tmp_state:
+        tmp_state = get_request_val("state", use_session=True)
     if tmp_state:
         session["oidc_state"] = tmp_state
 
@@ -1617,7 +1619,6 @@ def signin():
         )
 
     # shouldn't get to here
-    session.clear()
     return redirect("/sign-in")
 
 
