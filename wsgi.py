@@ -1045,7 +1045,6 @@ def auth_oidc():
 
         if "oidc_state" in session:
             redirect_string += f"state={session['oidc_state']}"
-            session.pop("oidc_state", None)
 
         redirect_string = redirect_string.strip("&")
 
@@ -1053,7 +1052,6 @@ def auth_oidc():
         session.pop("oidc_redirect_uri", None)
         session.pop("oidc_response_mode", None)
         session.pop("oidc_response_types", None)
-        session.pop("oidc_nonce", None)
         session.pop("oidc_scope", None)
     elif tmp_client_id:
         redirect_string = f"/sign-in?to_app={tmp_client_id}"
