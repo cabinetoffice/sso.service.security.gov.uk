@@ -120,8 +120,13 @@ def get_auth_type(email) -> str:
     #    return "microsoft"
     # if email.endswith("@cabinetoffice.gov.uk"):
     #    return "google"
+
+    if email == "oliver.chalk@digital.cabinet-office.gov.uk":
+        return "email"
+
     if email.endswith("@digital.cabinet-office.gov.uk"):
         return "google"
+
     return "email"
 
 
