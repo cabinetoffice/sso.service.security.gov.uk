@@ -898,15 +898,24 @@ def auth_oidc():
     tmp_redirect_url = None
     if client["ok"]:
         if "redirect_url_override" in client and client["redirect_url_override"]:
-            session["oidc_redirect_uri"] = client["redirect_url_override"]
-        elif raw_redirect_url is not None and "redirect_urls" in client:
-            if raw_redirect_url:
-                for redurl in client["redirect_urls"]:
-                    if raw_redirect_url == redurl or raw_redirect_url.startswith(
-                        redurl
-                    ):
-                        tmp_redirect_url = raw_redirect_url
-                        break
+            urlor = client["redirect_url_override"]
+            if raw_redirect_url is not None:
+                uripf = "&" if "?" in urlor else "?"
+                raw_redirect_url = f"{urlor}{uripf}{redirect_url_attribute}={raw_redirect_url}".replace(
+                    "?&", "?"
+                )
+            else:
+                raw_redirect_url = urlor
+
+        if (
+            raw_redirect_url is not None
+            and raw_redirect_url
+            and "redirect_urls" in client
+        ):
+            for redurl in client["redirect_urls"]:
+                if raw_redirect_url == redurl or raw_redirect_url.startswith(redurl):
+                    tmp_redirect_url = raw_redirect_url
+                    break
             if tmp_redirect_url is None:
                 tmp_redirect_url = client["redirect_urls"][0]
     session["oidc_redirect_uri"] = (
