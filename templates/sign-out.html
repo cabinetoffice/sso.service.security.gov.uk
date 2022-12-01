@@ -1,0 +1,32 @@
+{% extends "_primary.html" %}
+
+{% block content %}
+<div class="govuk-breadcrumbs">
+  <ol class="govuk-breadcrumbs__list">
+    <li class="govuk-breadcrumbs__list-item">
+      <a class="govuk-breadcrumbs__link" href="/">Single Sign-On</a>
+    </li>
+    <li class="govuk-breadcrumbs__list-item" aria-current="page">Sign out</li>
+  </ol>
+</div>
+
+<main class="govuk-main-wrapper " id="main-content" role="main">
+  <h2 class="govuk-heading-l">Sign out</h2>
+
+  {% if from_app_name %}
+  <div class="govuk-warning-text">
+    <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+    <strong class="govuk-warning-text__text">
+      <span class="govuk-warning-text__assistive">Note</span>
+      You've signed out of {{ from_app_name }}
+    </strong>
+  </div>
+  {% endif %}
+
+  <div class="govuk-button-group">
+    <a href="/sign-out" role="button" draggable="false" class="govuk-button govuk-button--warning" data-module="govuk-button">Sign out SSO completely</a>
+    <a href="/dashboard" role="button" draggable="false" class="govuk-button" data-module="govuk-button">SSO Dashboard</a>
+  </div>
+
+</main>
+{% endblock %}

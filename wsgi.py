@@ -1096,6 +1096,14 @@ def root():
 
 @app.route("/sign-out", methods=["GET"])
 def signout():
+    if "from_app" in request.args:
+        page_params = {}
+        client = sso_oidc.get_client(request.args.get("from_app", None))
+        if client["ok"]:
+            if "name" in client:
+                page_params.update({"from_app_name": client["name"]})
+        return make_response(renderTemplate("sign-out.html", page_params))
+
     if session:
         for key in list(session.keys()):
             session.pop(key)
