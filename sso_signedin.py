@@ -51,21 +51,11 @@ def CheckCSRFSession(f):
     return wrap
 
 
-def UserAlreadySignedIn(f):
-    @wraps(f)
-    def wrap(*args, **kwds):
-        if "signed_in" in session and session["signed_in"]:
-            return redirect("/dashboard")
-        return f(*args, **kwds)
-
-    return wrap
-
-
 def UserShouldBeSignedIn(f):
     @wraps(f)
     def wrap(*args, **kwds):
         if DEBUG:
-            jprint({"session": session})
+            jprint({"UserShouldBeSignedIn:session": session})
         if "signed_in" in session and session["signed_in"]:
             return f(*args, **kwds)
         session.clear()
