@@ -901,13 +901,12 @@ def auth_oidc():
             urlor = client["redirect_url_override"]
             if raw_redirect_url is not None:
                 uripf = "&" if "?" in urlor else "?"
-                raw_redirect_url = f"{urlor}{uripf}{redirect_url_attribute}={raw_redirect_url}".replace(
+                tmp_redirect_url = f"{urlor}{uripf}{redirect_url_attribute}={raw_redirect_url}".replace(
                     "?&", "?"
                 )
             else:
-                raw_redirect_url = urlor
-
-        if (
+                tmp_redirect_url = urlor
+        elif (
             raw_redirect_url is not None
             and raw_redirect_url
             and "redirect_urls" in client
