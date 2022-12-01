@@ -14,12 +14,12 @@ resource "aws_cloudfront_cache_policy" "sso_wsgi_cache" {
       cookie_behavior = "whitelist"
       cookies {
         items = [
-          "__Host-Session",
-          "__host-session",
-          "__Host-Browser",
-          "__host-browser",
-          "__Host-RememberMe",
-          "__host-rememberme"
+          "__Host-Session-SSO",
+          "__host-session-sso",
+          "__Host-Browser-SSO",
+          "__host-browser-sso",
+          "__Host-RememberMe-SSO",
+          "__host-rememberme-sso"
         ]
       }
     }
@@ -67,12 +67,12 @@ resource "aws_cloudfront_origin_request_policy" "sso_wsgi" {
     cookie_behavior = "whitelist"
     cookies {
       items = [
-        "__Host-Session",
-        "__host-session",
-        "__Host-Browser",
-        "__host-browser",
-        "__Host-RememberMe",
-        "__host-rememberme"
+        "__Host-Session-SSO",
+        "__host-session-sso",
+        "__Host-Browser-SSO",
+        "__host-browser-sso",
+        "__Host-RememberMe-SSO",
+        "__host-rememberme-sso"
       ]
     }
   }

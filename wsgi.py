@@ -794,21 +794,13 @@ def google_callback():
 
 
 @app.route("/auth/oidc", methods=["GET", "POST"])
+@SetBrowserCookie
 def auth_oidc():
-    raw_redirect_url = None
-    tmp_client_id = None
-    tmp_redirect_url = None
-    tmp_response_types = None
-    tmp_response_mode = None
-    tmp_state = None
-    tmp_nonce = None
-
-    tmp_is_code = False
-    tmp_is_token = False
-    tmp_is_id_token = False
-
     client = {"ok": False}
 
+    # ==
+    # get tmp_client_id
+    # ==
     tmp_client_id = None
     if "client_id" in request.args:
         tmp_client_id = request.args["client_id"]
@@ -817,6 +809,9 @@ def auth_oidc():
     elif "oidc_client_id" in session:
         tmp_client_id = session["oidc_client_id"]
 
+    # ==
+    # get tmp_implicit_jwt
+    # ==
     tmp_implicit_jwt = False
     if tmp_client_id is not None:
         client = sso_oidc.get_client(tmp_client_id)
@@ -826,6 +821,10 @@ def auth_oidc():
         if "implicit_jwt" in client:
             tmp_implicit_jwt = client["implicit_jwt"]
 
+    # ==
+    # get tmp_response_types
+    # ==
+    tmp_response_types = None
     if tmp_implicit_jwt:
         tmp_response_types = "id_token"
     else:
@@ -835,6 +834,10 @@ def auth_oidc():
             tmp_response_types = request.form["response_type"]
         elif "oidc_response_types" in session:
             tmp_response_types = session["oidc_response_types"]
+
+    tmp_is_code = False
+    tmp_is_token = False
+    tmp_is_id_token = False
 
     if tmp_response_types is not None:
         if "code" in tmp_response_types:
@@ -848,7 +851,11 @@ def auth_oidc():
         return redirect("/error?type=response_type-not-set")
     session["oidc_response_types"] = tmp_response_types
 
-    if "response_mode" in client and client["response_mode"]:
+    # ==
+    # get tmp_response_mode
+    # ==
+    tmp_response_mode = None
+    if client["ok"] and "response_mode" in client and client["response_mode"]:
         tmp_response_mode = client["response_mode"]
     else:
         if "response_mode" in request.args:
@@ -866,26 +873,30 @@ def auth_oidc():
         tmp_uri_get_resp = tmp_response_mode == "uri_get"
         session["oidc_response_mode"] = tmp_response_mode
 
+    # ==
+    # get raw_redirect_url
+    # ==
+    raw_redirect_url = None
+    redirect_url_attribute = "redirect_uri"
+    if (
+        client["ok"]
+        and "redirect_uri_override" in client
+        and client["redirect_uri_override"]
+    ):
+        redirect_url_attribute = client["redirect_uri_override"]
+
+    if redirect_url_attribute in request.args:
+        raw_redirect_url = request.args[redirect_url_attribute]
+    elif redirect_url_attribute in request.form:
+        raw_redirect_url = request.form[redirect_url_attribute]
+    elif "oidc_redirect_uri" in session:
+        raw_redirect_url = session["oidc_redirect_uri"]
+
+    # ==
+    # get tmp_redirect_url
+    # ==
+    tmp_redirect_url = None
     if client["ok"]:
-        redirect_url_attribute = "redirect_uri"
-        if "redirect_uri_override" in client and client["redirect_uri_override"]:
-            redirect_url_attribute = client["redirect_uri_override"]
-
-        if redirect_url_attribute in request.args:
-            raw_redirect_url = request.args[redirect_url_attribute]
-        elif redirect_url_attribute in request.form:
-            raw_redirect_url = request.form[redirect_url_attribute]
-        elif "oidc_redirect_uri" in session:
-            raw_redirect_url = session["oidc_redirect_uri"]
-
-        jprint(
-            {
-                "path": "/auth/oidc",
-                "method": request.method,
-                "raw_redirect_url": raw_redirect_url,
-            }
-        )
-
         if "redirect_url_override" in client and client["redirect_url_override"]:
             session["oidc_redirect_uri"] = client["redirect_url_override"]
         elif raw_redirect_url is not None and "redirect_urls" in client:
@@ -898,19 +909,15 @@ def auth_oidc():
                         break
             if tmp_redirect_url is None:
                 tmp_redirect_url = client["redirect_urls"][0]
-            session["oidc_redirect_uri"] = (
-                tmp_redirect_url if tmp_redirect_url is not None else "/sign-in"
-            )
+    session["oidc_redirect_uri"] = (
+        tmp_redirect_url if tmp_redirect_url is not None else "/sign-in"
+    )
 
-        jprint(
-            {
-                "path": "/auth/oidc",
-                "method": request.method,
-                "raw_redirect_url": raw_redirect_url,
-            }
-        )
-
-    if "scope_override" in client and client["scope_override"]:
+    # ==
+    # get tmp_scope
+    # ==
+    tmp_scope = None
+    if client["ok"] and "scope_override" in client and client["scope_override"]:
         tmp_scope = client["scope_override"]
     else:
         if "scope" in request.args:
@@ -919,9 +926,14 @@ def auth_oidc():
             tmp_scope = request.form["scope"]
         elif "oidc_scope" in session:
             tmp_scope = session["oidc_scope"]
-    if tmp_scope:
-        session["oidc_scope"] = sso_oidc.sanitise_scopes(tmp_scope)
+    if tmp_scope is not None:
+        tmp_scope = sso_oidc.sanitise_scopes(tmp_scope)
+    session["oidc_scope"] = tmp_scope
 
+    # ==
+    # get tmp_state
+    # ==
+    tmp_state = None
     if "state" in request.args:
         tmp_state = request.args["state"]
     elif "state" in request.form:
@@ -930,6 +942,10 @@ def auth_oidc():
         tmp_state = session["oidc_state"]
     session["oidc_state"] = tmp_state
 
+    # ==
+    # get tmp_nonce
+    # ==
+    tmp_nonce = None
     if "nonce" in request.args:
         tmp_nonce = request.args["nonce"]
     elif "nonce" in request.form:
@@ -938,6 +954,9 @@ def auth_oidc():
         tmp_nonce = session["oidc_nonce"]
     session["oidc_nonce"] = tmp_nonce
 
+    # ==
+    # ** If signed in... **
+    # ==
     if "signed_in" in session and session["signed_in"] and "sub" in session:
         gus = sso_oidc.get_user_sub(sub=session["sub"])
 
@@ -1042,11 +1061,16 @@ def auth_oidc():
 
         redirect_string = redirect_string.strip("&")
 
-        session.pop("oidc_client_id", None)
-        session.pop("oidc_redirect_uri", None)
-        session.pop("oidc_response_mode", None)
-        session.pop("oidc_response_types", None)
-        session.pop("oidc_scope", None)
+        to_pop = []
+        for s in session:
+            if s.startswith("oidc_"):
+                to_pop.append(s)
+        print("to_pop:", to_pop)
+        for x in to_pop:
+            session.pop(x, None)
+    # ==
+    # ** End if signed in... **
+    # ==
     elif client["client_id"]:
         redirect_string = f"/sign-in?to_app={client['client_id']}"
 
