@@ -1162,11 +1162,18 @@ def dashboard():
                 else app_url
             )
 
+            dashboard_display = (
+                all_clients[client]["dashboard_display"]
+                if "dashboard_display" in all_clients[client]
+                else True
+            )
+
             allowed_apps[client] = {
                 "name": name,
                 "description": description,
                 "sign_in_url": sign_in_url,
                 "button_text": button_text,
+                "dashboard_display": dashboard_display,
             }
 
     return renderTemplate(

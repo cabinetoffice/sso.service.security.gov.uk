@@ -28,7 +28,7 @@
   {%- if allowed_apps %}
     {%- for a in allowed_apps %}
       {%- set app = allowed_apps[a] %}
-      {%- if app["name"] and app["sign_in_url"] %}
+      {%- if app["name"] and app["sign_in_url"] and app["dashboard_display"] %}
       <div>
         <h3 class="govuk-heading-m">{{ app["name"] }}</h3>
         {%- if app["description"] %}
