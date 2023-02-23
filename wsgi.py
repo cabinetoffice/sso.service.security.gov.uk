@@ -1361,9 +1361,29 @@ def signin():
     code_fail = False
     signed_in = False
 
+    redirect_url = "/dashboard"
+    to_app = get_request_val(
+        "to_app",
+        use_posted_data=True,
+        use_querystrings=True,
+        use_session=True,
+    )
+    if to_app:
+        if sso_oidc.is_client(to_app):
+            client = sso_oidc.get_client(to_app)
+            redirect_url = (
+                client["sign_in_url"]
+                if "sign_in_url" in client and client["sign_in_url"]
+                else (
+                    client["app_url"]
+                    if "app_url" in client and client["app_url"]
+                    else None
+                )
+            )
+
     if request.method != "POST":
         if "signed_in" in session and session["signed_in"]:
-            return redirect("/dashboard")
+            return redirect(redirect_url)
         else:
             return return_sign_in()
 
@@ -1643,17 +1663,6 @@ def signin():
                 "browser_cookie_value": browser_cookie_value,
             }
         )
-
-        redirect_url = "/dashboard"
-        to_app = get_request_val(
-            "to_app",
-            use_posted_data=True,
-            use_querystrings=True,
-            use_session=True,
-        )
-        if to_app:
-            if sso_oidc.is_client(to_app):
-                redirect_url = "/auth/oidc"
 
         return config_remember_me_cookie(
             session["email"]["email"], redirect(redirect_url)
