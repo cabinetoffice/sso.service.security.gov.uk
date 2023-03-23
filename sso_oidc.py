@@ -79,9 +79,12 @@ def get_user_by_auth_code(client_id: str, client_secret: str, auth_code: str) ->
 
     clients = get_clients()
 
+    time.sleep(0.2)
+
     if client_id in clients and client_secret == clients[client_id]["secret"]:
         try:
             ac = read_file(f"auth_codes/{auth_code}.json", "{}")
+            jprint("get_user_by_auth_code:ac:", ac)
             if ac:
                 jac = json.loads(ac)
                 if "sub" in jac and "write_time" in jac:
@@ -106,6 +109,7 @@ def get_user_by_auth_code(client_id: str, client_secret: str, auth_code: str) ->
 
         delete_auth_code(auth_code)
 
+    jprint("get_user_by_auth_code:res:", res)
     return res
 
 

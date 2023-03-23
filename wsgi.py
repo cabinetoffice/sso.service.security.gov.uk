@@ -368,6 +368,14 @@ def auth_token():
                 client_creds = athz.split(":", 1)
                 params["client_id"] = client_creds[0]
                 params["client_secret"] = client_creds[1]
+    
+    jprint(
+        {
+            "path": "/auth/token",
+            "method": request.method,
+            "debug": base64.b64encode(json.dumps(params,default=str).encode("utf-8"))
+        }
+    )
 
     for k in required_keys:
         value = params.get(k)
