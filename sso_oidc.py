@@ -84,7 +84,6 @@ def get_user_by_auth_code(client_id: str, client_secret: str, auth_code: str) ->
     if client_id in clients and client_secret == clients[client_id]["secret"]:
         try:
             ac = read_file(f"auth_codes/{auth_code}.json", "{}")
-            jprint("get_user_by_auth_code:ac:", ac)
             if ac:
                 jac = json.loads(ac)
                 if "sub" in jac and "write_time" in jac:
@@ -107,9 +106,7 @@ def get_user_by_auth_code(client_id: str, client_secret: str, auth_code: str) ->
         except Exception as e:
             jprint("get_user_by_auth_code:", e)
 
-        delete_auth_code(auth_code)
-
-    jprint("get_user_by_auth_code:res:", res)
+        # delete_auth_code(auth_code)
     return res
 
 
@@ -128,10 +125,10 @@ def delete_auth_code(auth_code: str) -> bool:
     except Exception as e:
         jprint("delete_auth_code:1:", e)
 
-    #try:
-    #    delete_file(f"auth_codes/{auth_code}.json")
-    #except Exception as e:
-    #    jprint("delete_auth_code:2:", e)
+    try:
+        delete_file(f"auth_codes/{auth_code}.json")
+    except Exception as e:
+        jprint("delete_auth_code:2:", e)
 
     return res
 

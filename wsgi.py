@@ -279,7 +279,7 @@ def lambda_handler(event, context):
         response = alb_lambda_handler(event, context)
         if "cache-control" not in response["headers"]:
             response["headers"]["cache-control"] = "private, no-cache, no-store, max-age=0"
-            
+
         jprint(
             {
                 "Request": event,
@@ -329,7 +329,7 @@ def oidc_config():
         "id_token_signing_alg_values_supported": ["RS256"],
         "scopes_supported": sso_oidc.get_available_scopes(),
         "token_endpoint_auth_methods_supported": [
-            # "client_secret_basic",
+            #"client_secret_basic",
             "client_secret_post",
             # "client_secret_jwt",
             # "none"
