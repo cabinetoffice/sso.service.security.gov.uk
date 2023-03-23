@@ -277,6 +277,9 @@ def lambda_handler(event, context):
                 raise Exception("x-cloudfront conflict")
 
         response = alb_lambda_handler(event, context)
+        if "cache-control" not in response["headers"]:
+            response["headers"]["cache-control"] = "private, no-cache, no-store, max-age=0"
+            
         jprint(
             {
                 "Request": event,
@@ -402,6 +405,7 @@ def auth_token():
                 "path": "/auth/token",
                 "method": request.method,
                 "error": "auth_token: auth_code invalid, returning 401",
+                "params": params,
             }
         )
         return returnError(401)
