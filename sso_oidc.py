@@ -124,10 +124,10 @@ def delete_auth_code(auth_code: str) -> bool:
     except Exception as e:
         jprint("delete_auth_code:1:", e)
 
-    try:
-        delete_file(f"auth_codes/{auth_code}.json")
-    except Exception as e:
-        jprint("delete_auth_code:2:", e)
+    #try:
+    #    delete_file(f"auth_codes/{auth_code}.json")
+    #except Exception as e:
+    #    jprint("delete_auth_code:2:", e)
 
     return res
 
@@ -329,10 +329,10 @@ def delete_access_code(access_code: str) -> bool:
     except Exception as e:
         jprint("delete_access_code:1:", e)
 
-    try:
-        delete_file(f"access_codes/{access_code}.json")
-    except Exception as e:
-        jprint("delete_access_code:2:", e)
+    #try:
+    #    delete_file(f"access_codes/{access_code}.json")
+    #except Exception as e:
+    #    jprint("delete_access_code:2:", e)
 
     return res
 
