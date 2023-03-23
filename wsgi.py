@@ -284,6 +284,7 @@ def lambda_handler(event, context):
                     "statusCode": response["statusCode"],
                     "headers": response["headers"],
                     "body_length": len(response["body"]),
+                    "body": base64.b64encode(response["body"].encode("utf-8")),
                 },
             }
         )
@@ -369,14 +370,6 @@ def auth_token():
                 params["client_id"] = client_creds[0]
                 params["client_secret"] = client_creds[1]
     
-    jprint(
-        {
-            "path": "/auth/token",
-            "method": request.method,
-            "debug": base64.b64encode(json.dumps(params,default=str).encode("utf-8"))
-        }
-    )
-
     for k in required_keys:
         value = params.get(k)
         if not value:
@@ -485,12 +478,29 @@ def auth_profile():
         use_posted_data=True,
     )
 
+    jprint(
+        {
+            "path": "/auth/profile",
+            "method": request.method,
+            "authorization": authorization,
+            "id_token": id_token,
+        }
+    )
+
     if authorization:
         if authorization.lower().startswith("bearer "):
             authorization = authorization.split(" ", 1)[1].strip()
         if not re.search(r"^[a-zA-Z0-9]{64}$", authorization):
             authorization = None
             user_info["error"] = "Bad or no access_token sent"
+            jprint(
+                {
+                    "path": "/auth/profile",
+                    "method": request.method,
+                    "error": 400,
+                    "user_info": user_info,
+                }
+            )
             return make_response(jsonify(user_info), 400)
 
     gus = {}
