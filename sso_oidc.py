@@ -79,8 +79,6 @@ def get_user_by_auth_code(client_id: str, client_secret: str, auth_code: str) ->
 
     clients = get_clients()
 
-    time.sleep(0.1)
-
     if client_id in clients and client_secret == clients[client_id]["secret"]:
         try:
             ac = read_file(f"auth_codes/{auth_code}.json", "{}")
@@ -158,7 +156,7 @@ def generate_id_token(
 ):
     id_token = None
 
-    expiry = 3600
+    expiry = 7200
 
     if time_now is None:
         time_now = int(time.time())
