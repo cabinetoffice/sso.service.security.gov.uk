@@ -162,7 +162,7 @@ jobs:
           echo "Checking /auth/token"
           curl -v "https://${SERVICE_DOMAIN}/auth/token" \
             --connect-timeout 10 --max-redirs 0 --silent --stderr - > .authtoken.txt
-          egrep -i '< HTTP/[0123\.]+ 401' .authtoken.txt
+          egrep -i '< HTTP/[0123\.]+ 400' .authtoken.txt
 
           echo "Checking /auth/profile"
           curl -v "https://${SERVICE_DOMAIN}/auth/profile" \
