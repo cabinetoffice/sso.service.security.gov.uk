@@ -79,8 +79,6 @@ def get_user_by_auth_code(client_id: str, client_secret: str, auth_code: str) ->
 
     clients = get_clients()
 
-    time.sleep(0.1)
-
     if client_id in clients and client_secret == clients[client_id]["secret"]:
         try:
             ac = read_file(f"auth_codes/{auth_code}.json", "{}")
@@ -158,7 +156,7 @@ def generate_id_token(
 ):
     id_token = None
 
-    expiry = 3600
+    expiry = 7200
 
     if time_now is None:
         time_now = int(time.time())
@@ -172,11 +170,13 @@ def generate_id_token(
     aq = calculate_auth_quality(pfq, mfq)
 
     payload = {
-        "iss": URL_PREFIX,
+        "sub": sub,
+        "iss": URL_PREFIX.strip("/"),
         "iat": time_now,
+        "auth_time": time_now,
+        "token_use": "I'd",
         "exp": exp_time,
         "aud": client_id,
-        "sub": sub,
         "pf_quality": pfq.name,
         "mfa_quality": mfq.name,
         "auth_quality": aq.name,
@@ -197,8 +197,6 @@ def generate_id_token(
         payload["email"] = email
         payload["email_verified"] = True
         payload["preferred_username"] = email
-
-    
 
     if "profile" in scopes:
         dn = None
