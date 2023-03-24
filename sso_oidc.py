@@ -172,11 +172,13 @@ def generate_id_token(
     aq = calculate_auth_quality(pfq, mfq)
 
     payload = {
-        "iss": URL_PREFIX,
+        "sub": sub,
+        "iss": URL_PREFIX.strip("/"),
         "iat": time_now,
+        "auth_time": time_now,
+        "token_use": "I'd",
         "exp": exp_time,
         "aud": client_id,
-        "sub": sub,
         "pf_quality": pfq.name,
         "mfa_quality": mfq.name,
         "auth_quality": aq.name,
@@ -197,8 +199,6 @@ def generate_id_token(
         payload["email"] = email
         payload["email_verified"] = True
         payload["preferred_username"] = email
-
-    
 
     if "profile" in scopes:
         dn = None
