@@ -279,6 +279,7 @@ def lambda_handler(event, context):
         response = alb_lambda_handler(event, context)
         if "cache-control" not in response["headers"]:
             response["headers"]["cache-control"] = "private, no-cache, no-store, max-age=0"
+            response["headers"]["pragma"] = "no-cache"
 
         jprint(
             {
@@ -380,19 +381,19 @@ def auth_token():
                 {
                     "path": "/auth/token",
                     "method": request.method,
-                    "error": f"auth_token: key '{k}' does not exist, returning 401",
+                    "error": f"auth_token: key '{k}' does not exist, returning 400",
                 }
             )
-            return returnError(401)
+            return jsonify({"error":"invalid_client"}), 400
         elif len(value) != 64 and len(value) != 36:
             jprint(
                 {
                     "path": "/auth/token",
                     "method": request.method,
-                    "error": f"auth_token: key '{k}' invalid, returning 401",
+                    "error": f"auth_token: key '{k}' invalid, returning 400",
                 }
             )
-            return returnError(401)
+            return jsonify({"error":"unauthorized_client"}), 400
 
     client_id = params["client_id"]
     client_secret = params["client_secret"]
@@ -404,10 +405,10 @@ def auth_token():
             {
                 "path": "/auth/token",
                 "method": request.method,
-                "error": "auth_token: auth_code invalid, returning 401",
+                "error": "auth_token: auth_code invalid, returning 400",
             }
         )
-        return returnError(401)
+        return jsonify({"error":"invalid_request"}), 400
 
     scopes = gubac["scopes"]
 
@@ -425,10 +426,10 @@ def auth_token():
             {
                 "path": "/auth/token",
                 "method": request.method,
-                "error": "auth_token: id_token invalid, returning 401",
+                "error": "auth_token: id_token invalid, returning 400",
             }
         )
-        return returnError(401)
+        return jsonify({"error":"invalid_grant"}), 400
 
     access_token = sso_oidc.create_access_code(
         gubac["sub"], scopes, gubac["pf_quality"], gubac["mfa_quality"]
@@ -438,10 +439,10 @@ def auth_token():
             {
                 "path": "/auth/token",
                 "method": request.method,
-                "error": "auth_token: access_token invalid, returning 401",
+                "error": "auth_token: access_token invalid, returning 400",
             }
         )
-        return returnError(401)
+        return jsonify({"error":"invalid_grant"}), 400
 
     token = {
         "access_token": access_token,
