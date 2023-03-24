@@ -167,9 +167,6 @@ def generate_id_token(
     sub = user["sub"]
     email = user["email"]
 
-    if nonce is None and "nonce" in user:
-        nonce = user["nonce"]
-
     pfq = FactorQuality.get(pf_quality)
     mfq = FactorQuality.get(mfa_quality)
     aq = calculate_auth_quality(pfq, mfq)
@@ -183,8 +180,12 @@ def generate_id_token(
         "pf_quality": pfq.name,
         "mfa_quality": mfq.name,
         "auth_quality": aq.name,
-        "nonce": nonce,
     }
+
+    if nonce is None and "nonce" in user:
+        nonce = user["nonce"]
+    if nonce:
+        payload["nonce"] = nonce
 
     # mfa quality: none, low, medium, high
     # https://www.gov.uk/government/publications/authentication-credentials-for-online-government-services/giving-users-access-to-online-services
@@ -195,9 +196,9 @@ def generate_id_token(
     if "email" in scopes:
         payload["email"] = email
         payload["email_verified"] = True
+        payload["preferred_username"] = email
 
-    if "nonce" in user:
-        payload["nonce"] = user["nonce"]
+    
 
     if "profile" in scopes:
         dn = None
@@ -207,6 +208,7 @@ def generate_id_token(
             dn = email.split("@", 1)[0].replace(".", " ").title()
         payload["display_name"] = dn
         payload["nickname"] = dn
+        payload["name"] = dn
 
     if jwt_attributes:
         for ja in jwt_attributes:

@@ -330,7 +330,7 @@ def oidc_config():
         "id_token_signing_alg_values_supported": ["RS256"],
         "scopes_supported": sso_oidc.get_available_scopes(),
         "token_endpoint_auth_methods_supported": [
-            #"client_secret_basic",
+            "client_secret_basic",
             "client_secret_post",
             # "client_secret_jwt",
             # "none"
@@ -362,8 +362,7 @@ def auth_token():
     )
 
     if (
-        "client_id" not in params
-        and "authorization" in params
+        "authorization" in params
         and "Basic " in params["authorization"]
     ):
         b64 = params["authorization"].split(" ")[1]
@@ -446,13 +445,13 @@ def auth_token():
 
     token = {
         "access_token": access_token,
-        "refresh_token": access_token,
         "id_token": id_token,
+        "refresh_token": access_token,
         "token_type": "Bearer",
         "expires_in": 3600,
-        "scope": " ".join(scopes),
+        #"scope": " ".join(scopes),
     }
-    return jsonify(token)
+    return make_response(json.dumps(token, indent=2, default=str), 200, {"Content-Type": "application/json"})
 
 
 @app.route("/auth/profile", methods=["GET", "POST"])
