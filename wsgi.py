@@ -278,7 +278,9 @@ def lambda_handler(event, context):
 
         response = alb_lambda_handler(event, context)
         if "cache-control" not in response["headers"]:
-            response["headers"]["cache-control"] = "private, no-cache, no-store, max-age=0"
+            response["headers"][
+                "cache-control"
+            ] = "private, no-cache, no-store, max-age=0"
             response["headers"]["pragma"] = "no-cache"
 
         jprint(
@@ -361,10 +363,7 @@ def auth_token():
         *keys, use_querystrings=True, use_posted_data=True, use_headers=True
     )
 
-    if (
-        "authorization" in params
-        and "Basic " in params["authorization"]
-    ):
+    if "authorization" in params and "Basic " in params["authorization"]:
         b64 = params["authorization"].split(" ")[1]
         if b64:
             athz = base64.b64decode(b64).decode("utf-8")
@@ -372,7 +371,7 @@ def auth_token():
                 client_creds = athz.split(":", 1)
                 params["client_id"] = client_creds[0]
                 params["client_secret"] = client_creds[1]
-    
+
     for k in required_keys:
         value = params.get(k)
         if not value:
@@ -383,7 +382,7 @@ def auth_token():
                     "error": f"auth_token: key '{k}' does not exist, returning 400",
                 }
             )
-            return jsonify({"error":"invalid_client"}), 400
+            return jsonify({"error": "invalid_client"}), 400
         elif len(value) != 64 and len(value) != 36:
             jprint(
                 {
@@ -392,7 +391,7 @@ def auth_token():
                     "error": f"auth_token: key '{k}' invalid, returning 400",
                 }
             )
-            return jsonify({"error":"unauthorized_client"}), 400
+            return jsonify({"error": "unauthorized_client"}), 400
 
     client_id = params["client_id"]
     client_secret = params["client_secret"]
@@ -407,18 +406,18 @@ def auth_token():
                 "error": "auth_token: auth_code invalid, returning 400",
             }
         )
-        return jsonify({"error":"invalid_request"}), 400
+        return jsonify({"error": "invalid_request"}), 400
 
     scopes = gubac["scopes"]
 
     time_now = int(time.time())
     id_token = sso_oidc.generate_id_token(
-        client_id,
-        gubac,
-        scopes,
-        gubac["pf_quality"],
-        gubac["mfa_quality"],
-        time_now,
+        client_id=client_id,
+        user=gubac,
+        scopes=scopes,
+        pf_quality=gubac["pf_quality"],
+        mfa_quality=gubac["mfa_quality"],
+        time_now=time_now,
     )
     if id_token is None or not id_token:
         jprint(
@@ -428,7 +427,7 @@ def auth_token():
                 "error": "auth_token: id_token invalid, returning 400",
             }
         )
-        return jsonify({"error":"invalid_grant"}), 400
+        return jsonify({"error": "invalid_grant"}), 400
 
     access_token = sso_oidc.create_access_code(
         gubac["sub"], scopes, gubac["pf_quality"], gubac["mfa_quality"]
@@ -441,7 +440,7 @@ def auth_token():
                 "error": "auth_token: access_token invalid, returning 400",
             }
         )
-        return jsonify({"error":"invalid_grant"}), 400
+        return jsonify({"error": "invalid_grant"}), 400
 
     token = {
         "access_token": access_token,
@@ -450,8 +449,9 @@ def auth_token():
         "expires_in": 7200,
         "scope": " ".join(scopes),
     }
- 
-    return make_response(json.dumps(token, indent=2, default=str), 200, {"Content-Type": "application/json"})
+    resp_body = json.dumps(token, indent=2, default=str)
+    jprint({"path": "/auth/token", "method": request.method, "resp_body": resp_body})
+    return make_response(resp_body, 200, {"Content-Type": "application/json"})
 
 
 @app.route("/auth/profile", methods=["GET", "POST"])
@@ -1047,11 +1047,11 @@ def auth_oidc():
         id_token = None
         if tmp_is_id_token:
             id_token = sso_oidc.generate_id_token(
-                client["client_id"],
-                gus,
-                session["oidc_scope"],
-                session["pf_quality"],
-                session["mfa_quality"],
+                client_id=client["client_id"],
+                user=gus,
+                scopes=session["oidc_scope"],
+                pf_quality=session["pf_quality"],
+                mfa_quality=session["mfa_quality"],
                 nonce=session["oidc_nonce"],
                 jwt_attributes=(
                     client["jwt_attributes"] if "jwt_attributes" in client else None

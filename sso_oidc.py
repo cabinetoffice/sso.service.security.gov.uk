@@ -174,7 +174,7 @@ def generate_id_token(
         "iss": URL_PREFIX.strip("/"),
         "iat": time_now,
         "auth_time": time_now,
-        "token_use": "I'd",
+        "token_use": "id",
         "exp": exp_time,
         "aud": client_id,
         "pf_quality": pfq.name,
@@ -330,9 +330,9 @@ def delete_access_code(access_code: str) -> bool:
     except Exception as e:
         jprint("delete_access_code:1:", e)
 
-    #try:
+    # try:
     #    delete_file(f"access_codes/{access_code}.json")
-    #except Exception as e:
+    # except Exception as e:
     #    jprint("delete_access_code:2:", e)
 
     return res
