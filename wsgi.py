@@ -445,12 +445,13 @@ def auth_token():
 
     token = {
         "access_token": access_token,
-        "id_token": id_token,
-        "refresh_token": access_token,
         "token_type": "Bearer",
         "expires_in": 3600,
-        #"scope": " ".join(scopes),
+        "scope": " ".join(scopes),
     }
+    if client_id != "e42a5bd5-e2ad-4d93-b72b-89b8c24e276d":
+        token["id_token"] = id_token
+        
     return make_response(json.dumps(token, indent=2, default=str), 200, {"Content-Type": "application/json"})
 
 
