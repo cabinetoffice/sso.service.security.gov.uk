@@ -283,17 +283,18 @@ def lambda_handler(event, context):
             ] = "private, no-cache, no-store, max-age=0"
             response["headers"]["pragma"] = "no-cache"
 
-        jprint(
-            {
-                "Request": event,
-                "Response": {
-                    "statusCode": response["statusCode"],
-                    "headers": response["headers"],
-                    "body_length": len(response["body"]),
-                    "body": base64.b64encode(response["body"].encode("utf-8")),
-                },
-            }
-        )
+        print_obj = {
+            "Request": event,
+            "Response": {
+                "statusCode": response["statusCode"],
+                "headers": response["headers"],
+                "body_length": len(response["body"]),
+            },
+        }
+        if DEBUG:
+            print_obj["body"] = base64.b64encode(response["body"].encode("utf-8"))
+        jprint(print_obj)
+
         return response
     except Exception as e:
         jprint({"Request": event, "Response": None, "Error": traceback.format_exc()})
@@ -450,7 +451,12 @@ def auth_token():
         "scope": " ".join(scopes),
     }
     resp_body = json.dumps(token, indent=2, default=str)
-    jprint({"path": "/auth/token", "method": request.method, "resp_body": resp_body})
+
+    if DEBUG:
+        jprint(
+            {"path": "/auth/token", "method": request.method, "resp_body": resp_body}
+        )
+
     return make_response(resp_body, 200, {"Content-Type": "application/json"})
 
 
@@ -1279,7 +1285,7 @@ def profile():
         set_attribute_none=True,
     )
 
-    jprint({"path": "/profile", "method": request.method}, user_attributes)
+    # jprint({"path": "/profile", "method": request.method}, user_attributes)
 
     if request.method == "POST":
         keys = ["display-name", "sms-number"]
@@ -1542,7 +1548,7 @@ def signin():
                 else "",
                 "client_ip": c_ip,
                 "action": "sign-in-request-email",
-                "pretty_code": pretty_code,
+                "pretty_code": pretty_code if DEBUG else "REDACTED",
                 "browser_cookie_value": browser_cookie_value,
             }
         )
@@ -1655,8 +1661,10 @@ def signin():
                             else "",
                             "client_ip": c_ip,
                             "action": "sign-in-request-sms",
-                            "sms_number": user_attributes["sms_number"],
-                            "pretty_code": pretty_code,
+                            "sms_number": user_attributes["sms_number"]
+                            if DEBUG
+                            else "REDACTED",
+                            "pretty_code": pretty_code if DEBUG else "REDACTED",
                             "browser_cookie_value": browser_cookie_value,
                         }
                     )
