@@ -405,7 +405,6 @@ def auth_token():
                 "path": "/auth/token",
                 "method": request.method,
                 "error": "auth_token: auth_code invalid, returning 401",
-                "params": params,
             }
         )
         return returnError(401)
@@ -446,9 +445,9 @@ def auth_token():
 
     token = {
         "access_token": access_token,
-        "id_token": id_token,  # .decode("utf-8"),
-        "token_type": "bearer",
-        "expires_in": time_now,
+        "id_token": id_token,
+        "token_type": "Bearer",
+        "expires_in": 3600,
         "scope": " ".join(scopes),
     }
     return jsonify(token)
