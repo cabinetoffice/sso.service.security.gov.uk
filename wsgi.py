@@ -271,10 +271,14 @@ def get_request_vals(
 def lambda_handler(event, context):
     try:
         if AWS_CLOUDFRONT_KEY and "headers" in event:
-            if "x-cloudfront" not in event["headers"]:
-                raise Exception("Missing x-cloudfront header")
-            if event["headers"]["x-cloudfront"] != AWS_CLOUDFRONT_KEY:
-                raise Exception("x-cloudfront conflict")
+            if (
+                "via" in event["headers"]
+                and "cloudfront" in event["headers"]["via"].lower()
+            ):
+                if "x-cloudfront" not in event["headers"]:
+                    raise Exception("Missing x-cloudfront header")
+                if event["headers"]["x-cloudfront"] != AWS_CLOUDFRONT_KEY:
+                    raise Exception("x-cloudfront conflict")
 
         response = alb_lambda_handler(event, context)
         if "cache-control" not in response["headers"]:
