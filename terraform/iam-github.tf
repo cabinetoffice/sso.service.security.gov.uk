@@ -16,6 +16,7 @@ resource "aws_iam_policy" "github_policy" {
               Action   = [
                   "route53:List*",
                   "route53:Get*",
+                  "route53:Change*",
                   "acm:List*",
                   "acm:Get*",
                   "acm:Describe*",
