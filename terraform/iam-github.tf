@@ -22,6 +22,7 @@ resource "aws_iam_policy" "github_policy" {
                   "acm:Describe*",
                   "iam:Get*",
                   "iam:List*",
+                  "iam:Delete*",
                   "logs:Describe*",
                   "logs:List*",
                   "s3:List*",
