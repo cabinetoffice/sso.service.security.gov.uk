@@ -479,7 +479,7 @@ def auth_profile():
         "pf_quality": FactorQuality.none,
         "mfa_quality": FactorQuality.none,
         "auth_quality": FactorQuality.none,
-        "acr": "0",
+        "acr": None,
         # "amr": "",
     }
 
