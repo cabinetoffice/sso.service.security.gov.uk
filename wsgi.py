@@ -342,6 +342,11 @@ def oidc_config():
             # "client_secret_jwt",
             # "none"
         ],
+        "acr_values_supported": [
+            "AAL1",
+            "AAL2",
+            "AAL3",
+        ],
         "claims_supported": [
             "aud",
             "email",
@@ -351,8 +356,11 @@ def oidc_config():
             "sub",
             "display_name",
             "nickname",
+            "auth_quality",
             "pf_quality",
             "mfa_quality",
+            "acr",
+            # "amr",
         ],
         "code_challenge_methods_supported": ["plain"],
         "grant_types_supported": ["implicit", "authorization_code"],
@@ -471,6 +479,8 @@ def auth_profile():
         "pf_quality": FactorQuality.none,
         "mfa_quality": FactorQuality.none,
         "auth_quality": FactorQuality.none,
+        "acr": "0",
+        # "amr": "",
     }
 
     authorization = None
@@ -540,6 +550,8 @@ def auth_profile():
         user_info["auth_quality"] = calculate_auth_quality(
             user_info["pf_quality"], user_info["mfa_quality"]
         )
+
+        user_info["acr"] = FactorQuality.get(user_info["auth_quality"]).acr()
 
         if "email" in gus["scopes"] and "email" in gus:
             user_info["email"] = gus["email"]

@@ -180,6 +180,7 @@ def generate_id_token(
         "pf_quality": pfq.name,
         "mfa_quality": mfq.name,
         "auth_quality": aq.name,
+        "acr": aq.acr(),
     }
 
     if nonce is None and "nonce" in user:
@@ -509,7 +510,6 @@ def update_subs_json(sub: str, updates: dict) -> bool:
     usub = {"sub": sub, "attributes": {}}
 
     try:
-
         usub_temp = read_file(f"subs/sub/{sub}.json")
         if usub_temp:
             usub = json.loads(usub_temp)
