@@ -24,7 +24,7 @@ resource "aws_iam_policy" "github_policy" {
                   "iam:List*",
                   "iam:Delete*",
                   "iam:CreatePolicyVersion",
-                  "iam:UpdatePolicyVersion",
+                  "iam:Update*",
                   "logs:Put*",
                   "logs:Describe*",
                   "logs:List*",
