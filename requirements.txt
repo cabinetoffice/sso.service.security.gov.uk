@@ -5,6 +5,6 @@ flask==2.3.2
 authlib==1.2.0
 ItsDangerous==2.1.2
 notifications-python-client==8.0.1
-python-dotenv==0.21.1
+python-dotenv==1.0.0
 PyJWT==2.6.0
 urllib3==1.26.15
