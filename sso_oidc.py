@@ -104,8 +104,7 @@ def get_user_by_auth_code(client_id: str, client_secret: str, auth_code: str) ->
         except Exception as e:
             jprint("get_user_by_auth_code:", e)
 
-        delete_auth_code(auth_code)
-
+        # delete_auth_code(auth_code)
     return res
 
 
@@ -157,7 +156,7 @@ def generate_id_token(
 ):
     id_token = None
 
-    expiry = 3600
+    expiry = 7200
 
     if time_now is None:
         time_now = int(time.time())
@@ -166,24 +165,28 @@ def generate_id_token(
     sub = user["sub"]
     email = user["email"]
 
-    if nonce is None and "nonce" in user:
-        nonce = user["nonce"]
-
     pfq = FactorQuality.get(pf_quality)
     mfq = FactorQuality.get(mfa_quality)
     aq = calculate_auth_quality(pfq, mfq)
 
     payload = {
-        "iss": URL_PREFIX,
+        "sub": sub,
+        "iss": URL_PREFIX.strip("/"),
         "iat": time_now,
+        "auth_time": time_now,
+        "token_use": "id",
         "exp": exp_time,
         "aud": client_id,
-        "sub": sub,
         "pf_quality": pfq.name,
         "mfa_quality": mfq.name,
         "auth_quality": aq.name,
-        "nonce": nonce,
+        "acr": aq.acr(),
     }
+
+    if nonce is None and "nonce" in user:
+        nonce = user["nonce"]
+    if nonce:
+        payload["nonce"] = nonce
 
     # mfa quality: none, low, medium, high
     # https://www.gov.uk/government/publications/authentication-credentials-for-online-government-services/giving-users-access-to-online-services
@@ -194,9 +197,7 @@ def generate_id_token(
     if "email" in scopes:
         payload["email"] = email
         payload["email_verified"] = True
-
-    if "nonce" in user:
-        payload["nonce"] = user["nonce"]
+        payload["preferred_username"] = email
 
     if "profile" in scopes:
         dn = None
@@ -206,6 +207,7 @@ def generate_id_token(
             dn = email.split("@", 1)[0].replace(".", " ").title()
         payload["display_name"] = dn
         payload["nickname"] = dn
+        payload["name"] = dn
 
     if jwt_attributes:
         for ja in jwt_attributes:
@@ -329,10 +331,10 @@ def delete_access_code(access_code: str) -> bool:
     except Exception as e:
         jprint("delete_access_code:1:", e)
 
-    try:
-        delete_file(f"access_codes/{access_code}.json")
-    except Exception as e:
-        jprint("delete_access_code:2:", e)
+    # try:
+    #    delete_file(f"access_codes/{access_code}.json")
+    # except Exception as e:
+    #    jprint("delete_access_code:2:", e)
 
     return res
 
@@ -508,7 +510,6 @@ def update_subs_json(sub: str, updates: dict) -> bool:
     usub = {"sub": sub, "attributes": {}}
 
     try:
-
         usub_temp = read_file(f"subs/sub/{sub}.json")
         if usub_temp:
             usub = json.loads(usub_temp)

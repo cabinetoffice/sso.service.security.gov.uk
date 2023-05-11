@@ -193,6 +193,7 @@ def read_file(filename: str, default: str = None, bucket_type: str = "sessions")
         if os.path.isfile(fn):
             f = open(fn, "r")
             res = f.read()
+            f.close()
 
     if type(res) == bytes:
         res = res.decode("utf-8").strip()

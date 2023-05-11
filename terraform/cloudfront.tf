@@ -27,6 +27,7 @@ resource "aws_cloudfront_cache_policy" "sso_wsgi_cache" {
       header_behavior = "whitelist"
       headers {
         items = [
+          "Authorization",
           "CloudFront-Viewer-Country-Name",
           "Origin",
           "Access-Control-Request-Method",

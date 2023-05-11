@@ -1,8 +1,6 @@
 import numbers
-import json
 
 from enum import Enum, EnumMeta
-from math import ceil
 from functools import total_ordering
 
 
@@ -103,6 +101,21 @@ class FactorQuality(str, Enum, metaclass=FactorQualityMeta):
 
     def __json__(self):
         return str(self)
+
+    def acr(self):
+        if self.value == "none":
+            return None
+        elif self.value == "low":
+            return "0"
+        elif self.value == "medium":
+            return {"values": ["AAL1"]}
+        elif self.value == "high":
+            return {"values": ["AAL2"]}
+        elif self.value == "veryhigh":
+            return {"values": ["AAL3"]}
+        elif self.value == "highest":
+            return {"values": ["AAL3"]}
+        return None
 
     @classmethod
     def list(cls):

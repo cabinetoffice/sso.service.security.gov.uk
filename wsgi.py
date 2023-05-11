@@ -271,22 +271,34 @@ def get_request_vals(
 def lambda_handler(event, context):
     try:
         if AWS_CLOUDFRONT_KEY and "headers" in event:
-            if "x-cloudfront" not in event["headers"]:
-                raise Exception("Missing x-cloudfront header")
-            if event["headers"]["x-cloudfront"] != AWS_CLOUDFRONT_KEY:
-                raise Exception("x-cloudfront conflict")
+            if (
+                "via" in event["headers"]
+                and "cloudfront" in event["headers"]["via"].lower()
+            ):
+                if "x-cloudfront" not in event["headers"]:
+                    raise Exception("Missing x-cloudfront header")
+                if event["headers"]["x-cloudfront"] != AWS_CLOUDFRONT_KEY:
+                    raise Exception("x-cloudfront conflict")
 
         response = alb_lambda_handler(event, context)
-        jprint(
-            {
-                "Request": event,
-                "Response": {
-                    "statusCode": response["statusCode"],
-                    "headers": response["headers"],
-                    "body_length": len(response["body"]),
-                },
-            }
-        )
+        if "cache-control" not in response["headers"]:
+            response["headers"][
+                "cache-control"
+            ] = "private, no-cache, no-store, max-age=0"
+            response["headers"]["pragma"] = "no-cache"
+
+        print_obj = {
+            "Request": event,
+            "Response": {
+                "statusCode": response["statusCode"],
+                "headers": response["headers"],
+                "body_length": len(response["body"]),
+            },
+        }
+        if DEBUG:
+            print_obj["body"] = base64.b64encode(response["body"].encode("utf-8"))
+        jprint(print_obj)
+
         return response
     except Exception as e:
         jprint({"Request": event, "Response": None, "Error": traceback.format_exc()})
@@ -325,10 +337,15 @@ def oidc_config():
         "id_token_signing_alg_values_supported": ["RS256"],
         "scopes_supported": sso_oidc.get_available_scopes(),
         "token_endpoint_auth_methods_supported": [
-            # "client_secret_basic",
+            "client_secret_basic",
             "client_secret_post",
             # "client_secret_jwt",
             # "none"
+        ],
+        "acr_values_supported": [
+            "AAL1",
+            "AAL2",
+            "AAL3",
         ],
         "claims_supported": [
             "aud",
@@ -339,8 +356,11 @@ def oidc_config():
             "sub",
             "display_name",
             "nickname",
+            "auth_quality",
             "pf_quality",
             "mfa_quality",
+            "acr",
+            # "amr",
         ],
         "code_challenge_methods_supported": ["plain"],
         "grant_types_supported": ["implicit", "authorization_code"],
@@ -356,11 +376,7 @@ def auth_token():
         *keys, use_querystrings=True, use_posted_data=True, use_headers=True
     )
 
-    if (
-        "client_id" not in params
-        and "authorization" in params
-        and "Basic " in params["authorization"]
-    ):
+    if "authorization" in params and "Basic " in params["authorization"]:
         b64 = params["authorization"].split(" ")[1]
         if b64:
             athz = base64.b64decode(b64).decode("utf-8")
@@ -376,19 +392,19 @@ def auth_token():
                 {
                     "path": "/auth/token",
                     "method": request.method,
-                    "error": f"auth_token: key '{k}' does not exist, returning 401",
+                    "error": f"auth_token: key '{k}' does not exist, returning 400",
                 }
             )
-            return returnError(401)
+            return jsonify({"error": "invalid_client"}), 400
         elif len(value) != 64 and len(value) != 36:
             jprint(
                 {
                     "path": "/auth/token",
                     "method": request.method,
-                    "error": f"auth_token: key '{k}' invalid, returning 401",
+                    "error": f"auth_token: key '{k}' invalid, returning 400",
                 }
             )
-            return returnError(401)
+            return jsonify({"error": "unauthorized_client"}), 400
 
     client_id = params["client_id"]
     client_secret = params["client_secret"]
@@ -400,31 +416,31 @@ def auth_token():
             {
                 "path": "/auth/token",
                 "method": request.method,
-                "error": "auth_token: auth_code invalid, returning 401",
+                "error": "auth_token: auth_code invalid, returning 400",
             }
         )
-        return returnError(401)
+        return jsonify({"error": "invalid_request"}), 400
 
     scopes = gubac["scopes"]
 
     time_now = int(time.time())
     id_token = sso_oidc.generate_id_token(
-        client_id,
-        gubac,
-        scopes,
-        gubac["pf_quality"],
-        gubac["mfa_quality"],
-        time_now,
+        client_id=client_id,
+        user=gubac,
+        scopes=scopes,
+        pf_quality=gubac["pf_quality"],
+        mfa_quality=gubac["mfa_quality"],
+        time_now=time_now,
     )
     if id_token is None or not id_token:
         jprint(
             {
                 "path": "/auth/token",
                 "method": request.method,
-                "error": "auth_token: id_token invalid, returning 401",
+                "error": "auth_token: id_token invalid, returning 400",
             }
         )
-        return returnError(401)
+        return jsonify({"error": "invalid_grant"}), 400
 
     access_token = sso_oidc.create_access_code(
         gubac["sub"], scopes, gubac["pf_quality"], gubac["mfa_quality"]
@@ -434,19 +450,26 @@ def auth_token():
             {
                 "path": "/auth/token",
                 "method": request.method,
-                "error": "auth_token: access_token invalid, returning 401",
+                "error": "auth_token: access_token invalid, returning 400",
             }
         )
-        return returnError(401)
+        return jsonify({"error": "invalid_grant"}), 400
 
     token = {
         "access_token": access_token,
-        "id_token": id_token,  # .decode("utf-8"),
-        "token_type": "bearer",
-        "expires_in": time_now,
+        "id_token": id_token,
+        "token_type": "Bearer",
+        "expires_in": 7200,
         "scope": " ".join(scopes),
     }
-    return jsonify(token)
+    resp_body = json.dumps(token, indent=2, default=str)
+
+    if DEBUG:
+        jprint(
+            {"path": "/auth/token", "method": request.method, "resp_body": resp_body}
+        )
+
+    return make_response(resp_body, 200, {"Content-Type": "application/json"})
 
 
 @app.route("/auth/profile", methods=["GET", "POST"])
@@ -456,6 +479,8 @@ def auth_profile():
         "pf_quality": FactorQuality.none,
         "mfa_quality": FactorQuality.none,
         "auth_quality": FactorQuality.none,
+        "acr": None,
+        # "amr": "",
     }
 
     authorization = None
@@ -477,12 +502,29 @@ def auth_profile():
         use_posted_data=True,
     )
 
+    jprint(
+        {
+            "path": "/auth/profile",
+            "method": request.method,
+            "authorization": authorization,
+            "id_token": id_token,
+        }
+    )
+
     if authorization:
         if authorization.lower().startswith("bearer "):
             authorization = authorization.split(" ", 1)[1].strip()
         if not re.search(r"^[a-zA-Z0-9]{64}$", authorization):
             authorization = None
             user_info["error"] = "Bad or no access_token sent"
+            jprint(
+                {
+                    "path": "/auth/profile",
+                    "method": request.method,
+                    "error": 400,
+                    "user_info": user_info,
+                }
+            )
             return make_response(jsonify(user_info), 400)
 
     gus = {}
@@ -508,6 +550,8 @@ def auth_profile():
         user_info["auth_quality"] = calculate_auth_quality(
             user_info["pf_quality"], user_info["mfa_quality"]
         )
+
+        user_info["acr"] = FactorQuality.get(user_info["auth_quality"]).acr()
 
         if "email" in gus["scopes"] and "email" in gus:
             user_info["email"] = gus["email"]
@@ -1025,11 +1069,11 @@ def auth_oidc():
         id_token = None
         if tmp_is_id_token:
             id_token = sso_oidc.generate_id_token(
-                client["client_id"],
-                gus,
-                session["oidc_scope"],
-                session["pf_quality"],
-                session["mfa_quality"],
+                client_id=client["client_id"],
+                user=gus,
+                scopes=session["oidc_scope"],
+                pf_quality=session["pf_quality"],
+                mfa_quality=session["mfa_quality"],
                 nonce=session["oidc_nonce"],
                 jwt_attributes=(
                     client["jwt_attributes"] if "jwt_attributes" in client else None
@@ -1257,7 +1301,7 @@ def profile():
         set_attribute_none=True,
     )
 
-    jprint({"path": "/profile", "method": request.method}, user_attributes)
+    # jprint({"path": "/profile", "method": request.method}, user_attributes)
 
     if request.method == "POST":
         keys = ["display-name", "sms-number"]
@@ -1520,7 +1564,7 @@ def signin():
                 else "",
                 "client_ip": c_ip,
                 "action": "sign-in-request-email",
-                "pretty_code": pretty_code,
+                "pretty_code": pretty_code if DEBUG else "REDACTED",
                 "browser_cookie_value": browser_cookie_value,
             }
         )
@@ -1633,8 +1677,10 @@ def signin():
                             else "",
                             "client_ip": c_ip,
                             "action": "sign-in-request-sms",
-                            "sms_number": user_attributes["sms_number"],
-                            "pretty_code": pretty_code,
+                            "sms_number": user_attributes["sms_number"]
+                            if DEBUG
+                            else "REDACTED",
+                            "pretty_code": pretty_code if DEBUG else "REDACTED",
                             "browser_cookie_value": browser_cookie_value,
                         }
                     )
