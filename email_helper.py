@@ -50,7 +50,9 @@ def email_parts(email) -> dict:
 
     if email:
         email = email.strip().lower()
-        x = re.search("^(?P<identifier>.*)(\@|%40)(?P<domain>.*\..*)$", email)
+        if len(email) >= 320:
+            return res
+        x = re.search("(?P<identifier>.*)(\@|%40)(?P<domain>.*)", email)
         if x:
             identifiers = extractIdentifiers(x.group("identifier"))
             if not identifiers:
@@ -59,8 +61,16 @@ def email_parts(email) -> dict:
                 identifier = identifiers["identifier"]
                 with_plus = identifiers["with_plus"]
 
+            
+            if len(identifier) > 64:
+                return res
+
             domain = x.group("domain")
             if len(domain.strip()) == 0:
+                return res
+            elif "." not in domain:
+                return res
+            elif len(domain) > 254:
                 return res
 
             res["identifier"] = identifier
@@ -75,18 +85,19 @@ def email_parts(email) -> dict:
 def extractIdentifiers(identifier: str) -> dict:
     identifier = identifier.strip()
 
-    re_match = re.search("^(?P<r>.*?)(?P<a>\+.*?)?(\%|\@|$)", identifier).groupdict()
-    res = re_match["r"]
-    add = re_match["a"]
+    re_match = re.search("^(?P<r>[^\+\%]+)(?P<a>\+.*)?", identifier)
+    if re_match:
+        res = re_match.groupdict()["r"]
+        add = re_match.groupdict()["a"]
 
-    if res:
-        res = res.strip()
+        if res:
+            res = res.strip()
 
-        if add:
-            add = add.replace("+", "").replace("%", "").replace("@", "").strip()
-            return {"identifier": res, "with_plus": f"{res}+{add}"}
+            if add:
+                add = add.replace("+", "").strip()
+                return {"identifier": res, "with_plus": f"{res}+{add}"}
 
-        return {"identifier": res, "with_plus": res}
+            return {"identifier": res, "with_plus": res}
 
     return {}
 
@@ -134,16 +145,16 @@ def emailKeys(email: str) -> list:
 
     res = []
 
-    email_parts = email_parts(email)
-    if email_parts:
-        domain = email_parts["domain"]
+    parts = email_parts(email)
+    if parts:
+        domain = parts["domain"]
 
-        if email_parts["email_with_plus"] != email_parts["email"]:
+        if parts["email_with_plus"] != parts["email"]:
             # add the full email with plus, e.g: firstname.lastname+example@test.service.gov.uk
-            res.append(f"email:{email_parts['email_with_plus']}")
+            res.append(f"email:{parts['email_with_plus']}")
 
         # add the normalised email, e.g: firstname.lastname@test.service.gov.uk
-        res.append(f"email:{email_parts['email']}")
+        res.append(f"email:{parts['email']}")
 
         # add the full domain, e.g: test.service.gov.uk
         res.append(f"domain:{domain}")
