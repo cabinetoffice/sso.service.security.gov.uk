@@ -941,6 +941,7 @@ def auth_oidc():
     # ==
     tmp_redirect_url = None
     if client["ok"]:
+        session["oidc_redirect_client"] = True
         if "redirect_url_override" in client and client["redirect_url_override"]:
             urlor = client["redirect_url_override"]
             if raw_redirect_url is not None:
@@ -1117,7 +1118,6 @@ def auth_oidc():
         for s in session:
             if s.startswith("oidc_"):
                 to_pop.append(s)
-        print("to_pop:", to_pop)
         for x in to_pop:
             session.pop(x, None)
     # ==
@@ -1415,15 +1415,26 @@ def signin():
     if to_app:
         if sso_oidc.is_client(to_app):
             client = sso_oidc.get_client(to_app)
-            redirect_url = (
-                client["sign_in_url"]
-                if "sign_in_url" in client and client["sign_in_url"]
-                else (
-                    client["app_url"]
-                    if "app_url" in client and client["app_url"]
-                    else None
+
+            redirect_url = None
+            if session.get("oidc_redirect_client", False):
+                redirect_url = session.get("oidc_redirect_uri", None)
+                jprint(
+                    "oidc_redirect_client is True, using oidc_redirect_uri:",
+                    redirect_url,
                 )
-            )
+                session.pop("oidc_redirect_client", None)
+                session.pop("oidc_redirect_uri", None)
+            if redirect_url is None:
+                redirect_url = (
+                    client["sign_in_url"]
+                    if "sign_in_url" in client and client["sign_in_url"]
+                    else (
+                        client["app_url"]
+                        if "app_url" in client and client["app_url"]
+                        else None
+                    )
+                )
 
     if request.method != "POST":
         if "signed_in" in session and session["signed_in"]:
