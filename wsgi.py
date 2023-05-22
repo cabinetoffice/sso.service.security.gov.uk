@@ -140,6 +140,10 @@ def client_ip():
         return request.environ["HTTP_X_FORWARDED_FOR"]
 
 
+def client_country():
+    return request.headers.get("cloudfront-viewer-country-name", "Unknown")
+
+
 def search_request_values(res: dict, search: dict, find: str):
     k, v = (None, None)
     d = dict(search) if search else {}
@@ -674,6 +678,7 @@ def microsoft_callback():
             if "display_name" in user_attributes and user_attributes["display_name"]
             else None
         )
+        session["init_country"] = client_country()
 
         jprint(
             {
@@ -682,6 +687,7 @@ def microsoft_callback():
                 if "email" in session and "email" in session["email"]
                 else "",
                 "client_ip": client_ip(),
+                "client_country": session["init_country"],
                 "microsoft_auth_ip": id_token["ipaddr"]
                 if "ipaddr" in id_token
                 else None,
@@ -814,6 +820,7 @@ def google_callback():
                 if "display_name" in user_attributes and user_attributes["display_name"]
                 else None
             )
+            session["init_country"] = client_country()
 
             jprint(
                 {
@@ -822,6 +829,7 @@ def google_callback():
                     if "email" in session and "email" in session["email"]
                     else "",
                     "client_ip": client_ip(),
+                    "client_country": session["init_country"],
                     "action": "google-sign-in-successful",
                     "browser_cookie_value": browser_cookie_value,
                 }
@@ -1139,7 +1147,7 @@ def root():
 
 
 @app.route("/sign-out", methods=["GET"])
-def signout():
+def signout(country_missmatch: bool = False):
     if "from_app" in request.args:
         page_params = {}
         client = sso_oidc.get_client(request.args.get("from_app", None))
@@ -1153,7 +1161,14 @@ def signout():
             session.pop(key)
         session.clear()
 
-    redirect_url = "/"
+    if country_missmatch:
+        return returnError(
+            status_code=401,
+            override_title="Unauthorised travel detected",
+            override_message="Please try again",
+        )
+
+    redirect_url: str = "/"
 
     to_client = get_request_val(
         "to_client",
@@ -1173,6 +1188,10 @@ def signout():
 @UserShouldBeSignedIn
 @SetBrowserCookie
 def dashboard():
+    cc = country_check()
+    if cc:
+        return cc
+
     allowed_apps = {}
     all_clients = sso_oidc.get_clients()
     for client in all_clients:
@@ -1360,6 +1379,28 @@ def profile():
     )
 
 
+def country_check():
+    browser_cookie_value = get_browser_cookie_value()
+    country = client_country()
+    init_country = session.get("init_country", None)
+    if init_country and init_country != "Unknown" and init_country != country:
+        jprint(
+            {
+                "sub": session["sub"],
+                "email": session["email"]["email"]
+                if "email" in session and "email" in session["email"]
+                else "",
+                "client_ip": client_ip(),
+                "client_country": country,
+                "action": "country-missmatch-signout",
+                "init_country": init_country,
+                "browser_cookie_value": browser_cookie_value,
+            }
+        )
+        return signout(country_missmatch=True)
+    return None
+
+
 def get_remember_me_cookie_value():
     email_raw = request.cookies.get(COOKIE_NAME_REMEMBERME, "").strip('"').strip()
     if email_raw:
@@ -1402,6 +1443,7 @@ def remove_remember_me_cookie(response):
 def signin():
     browser_cookie_value = get_browser_cookie_value()
     c_ip = client_ip()
+    country = client_country()
     code_fail = False
     signed_in = False
 
@@ -1438,6 +1480,10 @@ def signin():
 
     if request.method != "POST":
         if "signed_in" in session and session["signed_in"]:
+            cc = country_check()
+            if cc:
+                return cc
+
             return redirect(redirect_url)
         else:
             return return_sign_in()
@@ -1547,9 +1593,7 @@ def signin():
                         else (":".join(c_ip.split(":")[:-1]) + ":*")
                         if ":" in c_ip
                         else "Unknown",
-                        "country": request.headers["cloudfront-viewer-country-name"]
-                        if "cloudfront-viewer-country-name" in request.headers
-                        else "Unknown",
+                        "country": country,
                         "domain": DOMAIN,
                         "browser_guess": guess_browser(
                             request.headers["true-user-agent"]
@@ -1574,6 +1618,7 @@ def signin():
                 if "email" in session and "email" in session["email"]
                 else "",
                 "client_ip": c_ip,
+                "client_country": country,
                 "action": "sign-in-request-email",
                 "pretty_code": pretty_code if DEBUG else "REDACTED",
                 "browser_cookie_value": browser_cookie_value,
@@ -1609,6 +1654,7 @@ def signin():
                         if "email" in session and "email" in session["email"]
                         else "",
                         "client_ip": client_ip(),
+                        "client_country": country,
                         "action": "code-fail",
                         "browser_cookie_value": browser_cookie_value,
                     }
@@ -1622,6 +1668,7 @@ def signin():
                     session.pop("email-sign-in-complete")
                     session.pop("sms-sign-in-code")
                     session["mfa_quality"] = FactorQuality.medium
+                    session["init_country"] = country
                     signed_in = True
                 else:
                     return redirect("/sign-in")
@@ -1637,6 +1684,7 @@ def signin():
                             if "email" in session and "email" in session["email"]
                             else "",
                             "client_ip": client_ip(),
+                            "client_country": country,
                             "action": "code-fail",
                             "browser_cookie_value": browser_cookie_value,
                         },
@@ -1649,6 +1697,7 @@ def signin():
                 session["email-sign-in-complete"] = True
                 session["mfa_quality"] = FactorQuality.none
                 session["pf_quality"] = FactorQuality.medium
+                session["init_country"] = country
 
                 if not sms_auth_required:
                     signed_in = True
@@ -1687,6 +1736,7 @@ def signin():
                             if "email" in session and "email" in session["email"]
                             else "",
                             "client_ip": c_ip,
+                            "client_country": country,
                             "action": "sign-in-request-sms",
                             "sms_number": user_attributes["sms_number"]
                             if DEBUG
@@ -1701,6 +1751,10 @@ def signin():
                     )
 
     if signed_in or ("signed_in" in session and session["signed_in"]):
+        cc = country_check()
+        if cc:
+            return cc
+
         session.permanent = True
         session["signed_in"] = True
         session["display_name"] = (
@@ -1716,6 +1770,7 @@ def signin():
                 if "email" in session and "email" in session["email"]
                 else "",
                 "client_ip": client_ip(),
+                "client_country": country,
                 "action": "sign-in-successful",
                 "browser_cookie_value": browser_cookie_value,
             }
