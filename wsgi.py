@@ -822,6 +822,9 @@ def google_callback():
             )
             session["init_country"] = client_country()
 
+            if "oidc_redirect_client" in session and session["oidc_redirect_client"]:
+                redirect_url = "/auth/oidc"
+
             jprint(
                 {
                     "sub": session["sub"],
@@ -832,11 +835,9 @@ def google_callback():
                     "client_country": session["init_country"],
                     "action": "google-sign-in-successful",
                     "browser_cookie_value": browser_cookie_value,
+                    "redirect_url": redirect_url,
                 }
             )
-
-            if "oidc_redirect_uri" in session and session["oidc_redirect_uri"]:
-                redirect_url = "/auth/oidc"
 
             return config_remember_me_cookie(
                 session["email"]["email"], redirect(redirect_url)
@@ -947,6 +948,9 @@ def auth_oidc():
     # ==
     # get tmp_redirect_url
     # ==
+    session.pop("oidc_redirect_client", None)
+    session.pop("oidc_redirect_uri", None)
+
     tmp_redirect_url = None
     if client["ok"]:
         session["oidc_redirect_client"] = True
@@ -1458,25 +1462,23 @@ def signin():
         if sso_oidc.is_client(to_app):
             client = sso_oidc.get_client(to_app)
 
-            redirect_url = None
-            if session.get("oidc_redirect_client", False):
-                redirect_url = session.get("oidc_redirect_uri", None)
-                jprint(
-                    "oidc_redirect_client is True, using oidc_redirect_uri:",
-                    redirect_url,
+            # redirect_url = None
+            # if session.get("oidc_redirect_client", False):
+            #     redirect_url = session.get("oidc_redirect_uri", None)
+            #     jprint(
+            #         "oidc_redirect_client is True, using oidc_redirect_uri:",
+            #         redirect_url,
+            #     )
+            # if redirect_url is None:
+            redirect_url = (
+                client["sign_in_url"]
+                if "sign_in_url" in client and client["sign_in_url"]
+                else (
+                    client["app_url"]
+                    if "app_url" in client and client["app_url"]
+                    else None
                 )
-                session.pop("oidc_redirect_client", None)
-                session.pop("oidc_redirect_uri", None)
-            if redirect_url is None:
-                redirect_url = (
-                    client["sign_in_url"]
-                    if "sign_in_url" in client and client["sign_in_url"]
-                    else (
-                        client["app_url"]
-                        if "app_url" in client and client["app_url"]
-                        else None
-                    )
-                )
+            )
 
     if request.method != "POST":
         if "signed_in" in session and session["signed_in"]:
