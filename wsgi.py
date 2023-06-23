@@ -374,11 +374,12 @@ def oidc_config():
 
 @app.route("/auth/token", methods=["GET", "POST"])
 def auth_token():
-    required_keys = ["client_id", "client_secret", "code"]
-    keys = ["client_id", "client_secret", "code", "authorization"]
+    keys = ["client_id", "client_secret", "code", "authorization", "token"]
     params = get_request_vals(
         *keys, use_querystrings=True, use_posted_data=True, use_headers=True
     )
+    client_id = None
+    gubac = {}
 
     if "authorization" in params and "Basic " in params["authorization"]:
         b64 = params["authorization"].split(" ")[1]
@@ -389,41 +390,61 @@ def auth_token():
                 params["client_id"] = client_creds[0]
                 params["client_secret"] = client_creds[1]
 
-    for k in required_keys:
-        value = params.get(k)
-        if not value:
+    if "code" in params:
+        for k in ["client_id", "client_secret"]:
+            value = params.get(k)
+            if not value:
+                jprint(
+                    {
+                        "path": "/auth/token",
+                        "method": request.method,
+                        "error": f"auth_token: key '{k}' does not exist, returning 400",
+                    }
+                )
+                return jsonify({"error": "invalid_client"}), 400
+            elif len(value) != 64 and len(value) != 36:
+                jprint(
+                    {
+                        "path": "/auth/token",
+                        "method": request.method,
+                        "error": f"auth_token: key '{k}' invalid, returning 400",
+                    }
+                )
+                return jsonify({"error": "unauthorized_client"}), 400
+
+        client_id = params["client_id"]
+        client_secret = params["client_secret"]
+        auth_code = params["code"]
+        gubac = sso_oidc.get_user_by_auth_code(client_id, client_secret, auth_code)
+        if not gubac or "sub" not in gubac:
             jprint(
                 {
                     "path": "/auth/token",
                     "method": request.method,
-                    "error": f"auth_token: key '{k}' does not exist, returning 400",
+                    "error": "auth_token: auth_code invalid, returning 400",
                 }
             )
-            return jsonify({"error": "invalid_client"}), 400
-        elif len(value) != 64 and len(value) != 36:
+            return jsonify({"error": "invalid_code"}), 400
+
+    if "token" in params:
+        access_code = params["token"]
+        gubac = sso_oidc.get_user_by_access_code(access_code)
+        if not gubac or "sub" not in gubac:
             jprint(
                 {
                     "path": "/auth/token",
                     "method": request.method,
-                    "error": f"auth_token: key '{k}' invalid, returning 400",
+                    "error": "auth_token: access_code invalid, returning 400",
                 }
             )
-            return jsonify({"error": "unauthorized_client"}), 400
+            return jsonify({"error": "invalid_token"}), 400
+        elif "client_id" in gubac and gubac["client_id"]:
+            if "client_id" in params and params["client_id"] != gubac["client_id"]:
+                return jsonify({"error": "invalid_request"}), 400
+            client_id = gubac["client_id"]
 
-    client_id = params["client_id"]
-    client_secret = params["client_secret"]
-    auth_code = params["code"]
-
-    gubac = sso_oidc.get_user_by_auth_code(client_id, client_secret, auth_code)
     if not gubac or "sub" not in gubac:
-        jprint(
-            {
-                "path": "/auth/token",
-                "method": request.method,
-                "error": "auth_token: auth_code invalid, returning 400",
-            }
-        )
-        return jsonify({"error": "invalid_request"}), 400
+        return jsonify({"error": "invalid_parameters"}), 400
 
     scopes = gubac["scopes"]
 
@@ -447,7 +468,11 @@ def auth_token():
         return jsonify({"error": "invalid_grant"}), 400
 
     access_token = sso_oidc.create_access_code(
-        gubac["sub"], scopes, gubac["pf_quality"], gubac["mfa_quality"]
+        gubac["sub"],
+        scopes,
+        gubac["pf_quality"],
+        gubac["mfa_quality"],
+        client_id=client_id,
     )
     if access_token is None or not access_token:
         jprint(

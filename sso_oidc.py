@@ -176,7 +176,6 @@ def generate_id_token(
         "auth_time": time_now,
         "token_use": "id",
         "exp": exp_time,
-        "aud": client_id,
         "pf_quality": pfq.name,
         "mfa_quality": mfq.name,
         "auth_quality": aq.name,
@@ -187,6 +186,8 @@ def generate_id_token(
         nonce = user["nonce"]
     if nonce:
         payload["nonce"] = nonce
+    if client_id:
+        payload["aud"] = client_id
 
     # mfa quality: none, low, medium, high
     # https://www.gov.uk/government/publications/authentication-credentials-for-online-government-services/giving-users-access-to-online-services
@@ -308,6 +309,7 @@ def get_user_by_access_code(access_code: str) -> dict:
                         jac["mfa_quality"] if "mfa_quality" in jac else None
                     )
                     res["nonce"] = jac["nonce"] if "nonce" in jac else None
+                    res["client_id"] = jac["client_id"] if "client_id" in jac else None
     except Exception as e:
         jprint("get_user_by_access_code:", e)
 
@@ -345,6 +347,7 @@ def create_access_code(
     pf_quality: str = None,
     mfa_quality: str = None,
     nonce: str = None,
+    client_id: str = None,
 ) -> str:
     gus = get_user_sub(sub=sub)
     if "email" in gus:
@@ -367,6 +370,7 @@ def create_access_code(
                         "pf_quality": pf_quality,
                         "mfa_quality": mfa_quality,
                         "nonce": nonce,
+                        "client_id": client_id,
                     }
                 ),
             )
