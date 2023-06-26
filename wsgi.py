@@ -1190,6 +1190,8 @@ def signout(country_missmatch: bool = False):
         if client["ok"]:
             if "name" in client:
                 page_params.update({"from_app_name": client["name"]})
+            if "app_url" in client:
+                page_params.update({"app_url": client["app_url"]})
         return make_response(renderTemplate("sign-out.html", page_params))
 
     if session:

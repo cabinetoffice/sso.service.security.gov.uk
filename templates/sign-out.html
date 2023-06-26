@@ -21,6 +21,12 @@
       You've signed out of {{ from_app_name }}
     </strong>
   </div>
+
+  {%- if app_url %}
+  <div>
+    <p class="govuk-body"><a class="govuk-link" href="{{ app_url }}">Go back to {{ from_app_name }}</a></p>
+  </div>
+  {% endif %}
   {% endif %}
 
   <div class="govuk-button-group">
