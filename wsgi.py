@@ -997,8 +997,15 @@ def auth_oidc():
                 if raw_redirect_url == redurl or raw_redirect_url.startswith(redurl):
                     tmp_redirect_url = raw_redirect_url
                     break
-            if tmp_redirect_url is None:
+            if tmp_redirect_url is None and len(client["redirect_urls"]) > 0:
                 tmp_redirect_url = client["redirect_urls"][0]
+        elif (
+            raw_redirect_url is None
+            and "redirect_urls" in client
+            and len(client["redirect_urls"]) > 0
+        ):
+            tmp_redirect_url = client["redirect_urls"][0]
+
     session["oidc_redirect_uri"] = (
         tmp_redirect_url if tmp_redirect_url is not None else "/sign-in"
     )
