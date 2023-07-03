@@ -113,9 +113,6 @@
               <li class="govuk-footer__inline-list-item">
                 Signed in as {{ display_name_string }}
               </li>
-              <li class="govuk-footer__inline-list-item">
-                <a class="govuk-footer__link" href="/sign-out">Sign out</a>
-              </li>
               {%- endif %}
               <li class="govuk-footer__inline-list-item">
                 <a class="govuk-footer__link" href="/privacy-notice">Privacy Notice</a>
@@ -123,7 +120,7 @@
               <li class="govuk-footer__inline-list-item">
                 <a class="govuk-footer__link" href="/terms">Terms of Service</a>
               </li>
-              {%- if title != "Help" %}
+              {%- if not signed_in and title != "Help" %}
               <li class="govuk-footer__inline-list-item">
                 <a class="govuk-footer__link" href="/help">Help</a>
               </li>
