@@ -1013,7 +1013,7 @@ def auth_oidc():
     # ==
     # get tmp_scope
     # ==
-    tmp_scope = None
+    tmp_scope = []
     if client["ok"] and "scope_override" in client and client["scope_override"]:
         tmp_scope = client["scope_override"]
     else:
@@ -1023,7 +1023,7 @@ def auth_oidc():
             tmp_scope = request.form["scope"]
         elif "oidc_scope" in session:
             tmp_scope = session["oidc_scope"]
-    if tmp_scope is not None:
+    if tmp_scope:
         tmp_scope = sso_oidc.sanitise_scopes(tmp_scope)
     session["oidc_scope"] = tmp_scope
 
