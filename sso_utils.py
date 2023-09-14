@@ -1,5 +1,6 @@
 import os
 import random
+import secrets
 import string
 import re
 import json
@@ -140,7 +141,7 @@ def random_string(
         chars = string.digits
     else:
         chars = string.digits + string.ascii_letters
-    res = "".join(random.choice(chars) for i in range(length))
+    res = "".join(secrets.choice(chars) for _ in range(length))
     if lower:
         res = res.lower()
     return res

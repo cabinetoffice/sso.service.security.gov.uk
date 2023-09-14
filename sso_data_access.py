@@ -128,9 +128,8 @@ def delete_file(filename: str, bucket_type: str = "sessions") -> bool:
 
 def read_all_files(
     folder: str = "", default: str = None, bucket_type: str = "sessions"
-) -> list:
-    res = []
-    keys = []
+) -> dict:
+    res = {}
 
     if USE_AWS_S3_SESSIONS:
         try:
@@ -139,7 +138,7 @@ def read_all_files(
             )
             if "Contents" in s3_res:
                 for key in s3_res["Contents"]:
-                    keys.append(key["Key"])
+                    res[key["Key"]] = None
         except Exception as e:
             jprint({"function": "read_all_files", "error": str(e)})
     else:
@@ -151,12 +150,12 @@ def read_all_files(
                 os.path.normpath(folder),
             )
         ):
-            keys.append(os.path.join(folder, filename))
+            res[os.path.join(folder, filename)] = None
 
-    for key in keys:
+    for key in res:
         fres = read_file(key, default, bucket_type)
         if fres:
-            res.append(fres)
+            res[key] = fres
 
     return res
 

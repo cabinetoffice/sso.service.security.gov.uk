@@ -31,13 +31,26 @@ def get_clients() -> dict:
     res = {}
 
     from_files = read_all_files(bucket_type="clients")
-    for fc in from_files:
+    for fn in from_files:
+        fc = from_files[fn]
         if fc and fc.startswith("{"):
-            res.update(json.loads(fc))
+            try:
+                res.update(json.loads(fc))
+            except Exception as e:
+                jprint({"function": "get_clients", "file": fn, "error": str(e)})
 
     from_env = env_var("OAUTH_CLIENTS_JSON_OBJECT")
     if from_env and from_env.startswith("{"):
-        res.update(json.loads(from_env))
+        try:
+            res.update(json.loads(from_env))
+        except Exception as e:
+            jprint(
+                {
+                    "function": "get_clients",
+                    "env_var": "OAUTH_CLIENTS_JSON_OBJECT",
+                    "error": str(e),
+                }
+            )
 
     if not IS_PROD:
         jprint({"function": "get_clients", "clients": res})
