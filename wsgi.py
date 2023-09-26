@@ -898,7 +898,7 @@ def auth_oidc():
         if "implicit_jwt" in client:
             tmp_implicit_jwt = client["implicit_jwt"]
 
-    sk = f'oidc_{client.get("client_id", "0")}'
+    sk = 'oidc_' + client.get("client_id", "0")
     
     # ==
     # get tmp_response_types
@@ -1151,7 +1151,7 @@ def auth_oidc():
             redirect_string += f"{itq}={id_token}&"
 
         if f"{sk}_state" in session:
-            redirect_string += f"state={session[f'{sk}_state']}"
+            redirect_string += "state=" + session[f'{sk}_state']
 
         redirect_string = redirect_string.strip("&")
 
@@ -1814,12 +1814,12 @@ def signin():
             }
         )
 
-        to_pop = []
-        for s in session:
-            if s.startswith("oidc_"):
-                to_pop.append(s)
-        for x in to_pop:
-            session.pop(x, None)
+        #to_pop = []
+        #for s in session:
+        #    if s.startswith("oidc_"):
+        #        to_pop.append(s)
+        #for x in to_pop:
+        #    session.pop(x, None)
 
         return config_remember_me_cookie(
             session["email"]["email"], redirect(redirect_url)
