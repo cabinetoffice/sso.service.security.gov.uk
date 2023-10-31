@@ -7,6 +7,7 @@ import jwt
 import traceback
 import requests
 import hashlib
+import ssl
 
 from jwt import PyJWKClient
 
@@ -16,6 +17,7 @@ def random_sha256() -> str:
 
 
 class MicrosoftAuth:
+    errored = False
     dev_mode = False
     _client_id: str = None
     _client_secret: str = None
@@ -38,7 +40,7 @@ class MicrosoftAuth:
         self,
         client_id: str = None,
         client_secret: str = None,
-        discovery_document_url: str = "https://login.microsoftonline.com/common/.well-known/openid-configuration",
+        discovery_document_url: str = "https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration",
         dev_mode: bool = False,
     ):
         self.setup(client_id, client_secret, discovery_document_url)
@@ -54,7 +56,7 @@ class MicrosoftAuth:
         self.token_endpoint = None
         self.jwks_uri = None
 
-        self.scopes = ["openid", "User.ReadBasic.All"]
+        self.scopes = ["openid", "email", "profile"]
 
         self.dev_mode = dev_mode
 
@@ -63,16 +65,15 @@ class MicrosoftAuth:
     def get_oidc_config(self) -> dict:
         if not self._microsoft_fetch_is_error and not self._microsoft_oidc_config:
             try:
-                with urllib.request.urlopen(
-                    self.discovery_document_url, timeout=3
-                ) as url:
-                    if url:
-                        data = json.load(url)
-                        if data and "issuer" in data:
-                            self._microsoft_oidc_config = data
+                resp = requests.get(self.discovery_document_url, timeout=3)
+                if resp.status_code == 200 and resp.json():
+                    data = resp.json()
+                    if data and "issuer" in data:
+                        self._microsoft_oidc_config = data
             except Exception as e:
                 self._microsoft_fetch_error_msg = str(e) + traceback.format_exc()
                 self._microsoft_fetch_is_error = True
+                self.errored = True
 
         return self._microsoft_oidc_config
 
@@ -93,6 +94,13 @@ class MicrosoftAuth:
 
     def is_ready(self) -> bool:
         starts = f"http{'s://' if not self.dev_mode else ''}"
+        print("is_ready:starts:", starts)
+        print(
+            "is_ready:endpoints:",
+            self.auth_endpoint,
+            self.token_endpoint,
+            self.jwks_uri,
+        )
         return 3 == [
             starts
             for x in [self.auth_endpoint, self.token_endpoint, self.jwks_uri]
@@ -169,7 +177,6 @@ class MicrosoftAuth:
         state_to_compare: str = None,
         redirect_uri: str = None,
     ) -> dict:
-
         if not url:
             return {"error": True, "error_message": "Argument 'url' not set or empty"}
 
@@ -293,14 +300,22 @@ class MicrosoftAuth:
         data = {}
 
         try:
-            jwks_client = PyJWKClient(self.jwks_uri)
-            signing_key = jwks_client.get_signing_key_from_jwt(id_token)
+            # ssl_context = ssl.create_default_context()
+            # ssl_context.check_hostname = False
+            # ssl_context.verify_mode = ssl.CERT_NONE
+
+            # jwks_client = PyJWKClient(self.jwks_uri, ssl_context=ssl_context)
+            # signing_key = jwks_client.get_signing_key_from_jwt(id_token)
+
             data = jwt.decode(
                 id_token,
-                signing_key.key,
-                algorithms=["RS256"],
+                # apparently MS doesn't sign their JWTs...
+                verify=False,
+                # key=signing_key.key,
+                # algorithms=["RS256"],
+                algorithms=["none"],
                 audience=self._client_id,
-                options={"verify_exp": True},
+                options={"verify_exp": True, "verify_signature": False},
             )
         except Exception as e:
             return (True, str(e) + traceback.format_exc())

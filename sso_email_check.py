@@ -3,6 +3,10 @@ import json
 from sso_utils import env_var, to_list
 from email_helper import email_parts
 
+ENVIRONMENT = env_var("ENVIRONMENT", "development")
+IS_PROD = ENVIRONMENT.lower().startswith("prod")
+DEBUG = not IS_PROD
+
 
 def valid_email(email_input, client: dict = {}, debug: bool = False) -> dict:
     res = {"valid": False, "auth_type": None, "user_type": None}
@@ -118,6 +122,10 @@ def valid_email(email_input, client: dict = {}, debug: bool = False) -> dict:
 def get_auth_type(email) -> str:
     if email == "ollie.chalk@digital.cabinet-office.gov.uk":
         return "email"
+
+    if not IS_PROD:
+        if email.endswith("@ncsc.gov.uk"):
+            return "microsoft"
 
     if email.endswith("@digital.cabinet-office.gov.uk"):
         return "google"

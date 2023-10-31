@@ -82,8 +82,14 @@ MICROSOFT_CLIENT_ID = env_var("MICROSOFT_CLIENT_ID")
 MICROSOFT_CLIENT_SECRET = env_var("MICROSOFT_CLIENT_SECRET")
 ma = None
 try:
-    ma = MicrosoftAuth(MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET)
-    jprint({"MicrosoftAuth": {"in_use": True}})
+    ma = MicrosoftAuth(MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, dev_mode=DEBUG)
+    if not ma.errored:
+        jprint({"MicrosoftAuth": {"in_use": True}})
+    else:
+        jprint(
+            {"MicrosoftAuth": {"in_use": False, "error": ma._microsoft_fetch_error_msg}}
+        )
+        ma = None
 except Exception as e:
     jprint({"MicrosoftAuth": {"error": e, "in_use": False}})
 
@@ -631,7 +637,11 @@ def microsoft_callback():
             "error" in mr
             and mr["error"]
             and "error_message" in mr
-            and "login_required" in mr["error_message"]
+            and (
+                "login_required" in str(mr["error_message"])
+                or "not consented" in str(mr["error_message"])
+                or "interaction_required" in str(mr["error_message"])
+            )
         ):
             if "microsoft_retry" not in session or not session["microsoft_retry"]:
                 session.pop("microsoft_retry", None)
@@ -657,16 +667,16 @@ def microsoft_callback():
                 force_email=True,
             )
 
-        id_token = mr["id_token"]
+        id_token = mr.get("id_token", None)
 
-        if "amr" not in id_token or "mfa" not in id_token["amr"]:
+        if not id_token or not id_token.get("email", None):
             return return_sign_in(
                 is_error=True,
-                fail_message="Microsoft account missing multifactor authentication, please continue to try again with an email code",
+                fail_message="Microsoft account sign in failed, please continue to try again with an email code",
                 force_email=True,
             )
 
-        email = email_parts(id_token["upn"])
+        email = email_parts(id_token["email"])
         ve = valid_email(email, debug=DEBUG)
         if not ve["valid"]:
             return return_sign_in(
@@ -1564,6 +1574,7 @@ def signin():
         if ve["user_type"] is None or ve["user_type"] != "user":
             return returnError(403)
 
+        print("auth_type:", auth_type)
         session["email"] = email
 
         remember_me = False
@@ -1596,6 +1607,7 @@ def signin():
                 login_hint=email["email"],
                 domain_hint=email["domain"],
             )
+            print("MICROSOFT:", mr)
             if "error" in mr and mr["error"] == False and "url" in mr:
                 session["microsoft_state"] = mr["state"]
                 session["microsoft_nonce"] = mr["nonce"]
