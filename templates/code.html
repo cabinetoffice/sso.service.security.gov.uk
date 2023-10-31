@@ -38,11 +38,11 @@
   <form action="{{ form_url }}" method="post">
     <div class="govuk-form-group {{ 'govuk-form-group--error' if code_fail else '' }}">
       <label class="govuk-label" for="code">
-        Check your {{ device }} for code
+        Check your {{ device }} for a one-time code
       </label>
       {% if code_fail %}
       <p id="code-error" class="govuk-error-message">
-        <span class="govuk-visually-hidden">Error:</span> Code wasn't recognised
+        <span class="govuk-visually-hidden">Error:</span> That appears to be wrong, please try again
       </p>
       {% endif %}
       <input class="govuk-input govuk-input--width-10 {{ 'govuk-input--error' if code_fail else '' }}" id="code" name="code" type="code" pattern="{{ input_pattern }}" placeholder="{{ input_placeholder }}" spellcheck="false" autocomplete="off">
