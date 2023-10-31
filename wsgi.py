@@ -314,6 +314,14 @@ def health_check():
     return "IMOK"
 
 
+@app.route("/.well-known/microsoft-identity-association.json")
+def route_wkmia():
+    ms_app_id = None
+    if ENVIRONMENT == "nonprod":
+        ms_app_id = "301f0473-4ce3-483b-b2e9-32c4503cb4d2"
+    return jsonify({"associatedApplications": [{"applicationId": ms_app_id}]})
+
+
 @app.route("/.well-known/jwks.json")
 def jwks():
     return jsonify(jwt_signing.get_jwks())
