@@ -23,13 +23,17 @@ rm ./*.zip || echo "No ZIPs to delete"
 rm -rf .target || echo "No .target/ to delete"
 mkdir .target
 
-$PYTHON -m pip install -r requirements.txt -t .target/ --upgrade --no-user
+CRLIB=$(grep cryptography requirements.txt | cut -d';' -f1)
+grep -v cryptography requirements.txt > .install_requirements.txt
+
+$PYTHON -m pip install -r .install_requirements.txt -t .target/ --upgrade --no-user
 $PYTHON -m pip install \
+    --upgrade \
     --platform manylinux2014_x86_64 \
     --implementation cp \
-    --only-binary=:all: --upgrade \
+    --only-binary=:all: \
     --target .target/ \
-    cryptography
+    "$CRLIB"
 
 cp ./*.py .target/
 cp .env.shared .target/
