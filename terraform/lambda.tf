@@ -11,12 +11,12 @@ resource "aws_lambda_function" "lambda" {
   function_name    = local.lambda_name
   role             = aws_iam_role.lambda_role.arn
   handler          = "wsgi.lambda_handler"
-  runtime          = "python3.9"
+  runtime          = "python3.11"
 
   publish = true
 
-  memory_size = 256
-  timeout     = 30
+  memory_size = 384
+  timeout     = 45
 
   lifecycle {
     ignore_changes = [

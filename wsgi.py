@@ -1597,7 +1597,7 @@ def signin():
 
         # if not Microsoft or Google, then fallback to email code
 
-        code = random_string(9, True).lower()
+        code = random_string(9, only_numbers=True)
         pretty_code = f"{code[:3]}-{code[3:6]}-{code[6:]}"
 
         sub = sso_oidc.write_user_sub(email=email["email"])
@@ -1608,10 +1608,11 @@ def signin():
             set_attribute_none=True,
         )
 
-        if user_attributes["sms_number"] and len(user_attributes["sms_number"]) > 1:
-            session["sms_auth_required"] = True
-        else:
-            session["sms_auth_required"] = False
+        session["sms_auth_required"] = False
+        # TODO: re-enable SMS
+        if False:
+            if user_attributes["sms_number"] and len(user_attributes["sms_number"]) > 1:
+                session["sms_auth_required"] = True
 
         if USE_NOTIFY:
             try:

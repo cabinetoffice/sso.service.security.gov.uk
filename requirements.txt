@@ -1,10 +1,9 @@
-requests==2.30.0
-apig-wsgi==2.15.0
+requests==2.31.0
+apig-wsgi==2.18.0
 jinja2==3.1.2
-flask==2.3.2
-authlib==1.2.0
+flask==3.0.0
+authlib==1.2.1
 ItsDangerous==2.1.2
-notifications-python-client==8.0.1
+notifications-python-client==8.1.0
 python-dotenv==1.0.0
-PyJWT==2.6.0
-urllib3==1.26.15
+PyJWT==2.8.0
