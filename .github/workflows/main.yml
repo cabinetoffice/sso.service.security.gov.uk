@@ -57,8 +57,7 @@ jobs:
           echo "python_version=${PV}" >> $GITHUB_OUTPUT
 
       - uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.python_version }}
+        working-directory: main
 
       - name: Show me files
         run: ls -lah
