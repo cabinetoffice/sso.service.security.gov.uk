@@ -25,9 +25,8 @@ mkdir .target
 
 $PYTHON -m pip install -r requirements.txt -t .target/ --upgrade --no-user
 $PYTHON -m pip install \
-    --platform manylinux2010_x86_64 \
+    --platform manylinux2014_x86_64 \
     --implementation cp \
-    --python 3.9 \
     --only-binary=:all: --upgrade \
     --target .target/ \
     cryptography
