@@ -1,7 +1,7 @@
 {
   "devDependencies": {
     "chai": "^4.3.4",
-    "minify": "^9.1.0",
+    "minify": "^10.5.2",
     "mocha": "^10.1.0",
     "replace-in-file": "^6.3.5"
   },
