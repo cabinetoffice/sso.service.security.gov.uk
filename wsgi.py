@@ -633,17 +633,14 @@ def microsoft_callback():
         session.pop("microsoft_nonce", None)
         session.pop("microsoft_state", None)
 
-        if (
-            "error" in mr
-            and mr["error"]
-            and "error_message" in mr
-            and (
-                "login_required" in str(mr["error_message"])
-                or "not consented" in str(mr["error_message"])
-                or "interaction_required" in str(mr["error_message"])
-            )
-        ):
-            if "microsoft_retry" not in session or not session["microsoft_retry"]:
+        if "error" in mr and mr["error"] and "error_message" in mr:
+            if "consent_required" in str(mr["error_message"]):
+                return return_sign_in(
+                    is_error=True,
+                    fail_message="Microsoft application approval required, please continue to try again with an email code",
+                    force_email=True,
+                )
+            elif "microsoft_retry" not in session or not session["microsoft_retry"]:
                 session.pop("microsoft_retry", None)
                 email = session["email"]
                 mr = ma.step_one_get_redirect_url(
@@ -1493,6 +1490,23 @@ def remove_remember_me_cookie(response):
     return response
 
 
+def is_forced_email():
+    force_email = get_request_val(
+        "force_email",
+        use_posted_data=True,
+        use_querystrings=True,
+        use_session=True,
+    )
+    if force_email:
+        if str(force_email).lower()[0] in ["1", "t"]:
+            force_email = True
+        else:
+            force_email = False
+    else:
+        force_email = False
+    return force_email
+
+
 @app.route("/sign-in", methods=["GET", "POST"])
 @CheckCSRFSession
 @SetBrowserCookie
@@ -1574,7 +1588,6 @@ def signin():
         if ve["user_type"] is None or ve["user_type"] != "user":
             return returnError(403)
 
-        print("auth_type:", auth_type)
         session["email"] = email
 
         remember_me = False
@@ -1583,12 +1596,7 @@ def signin():
                 remember_me = True
         session["remember_me"] = remember_me
 
-        force_email = False
-        if "force_email" in session:
-            force_email = session["force_email"]
-            session.pop("force_email", None)
-
-        if not force_email and ga and auth_type == "google":
+        if not is_forced_email() and ga and auth_type == "google":
             gr = ga.step_one_get_redirect_url(
                 callback_url=f"{URL_PREFIX}/auth/google_callback",
                 login_hint=email["email"],
@@ -1601,13 +1609,12 @@ def signin():
             else:
                 return returnError(403)
 
-        if not force_email and ma and auth_type == "microsoft":
+        if not is_forced_email() and ma and auth_type == "microsoft":
             mr = ma.step_one_get_redirect_url(
                 callback_url=f"{URL_PREFIX}/auth/microsoft_callback",
                 login_hint=email["email"],
                 domain_hint=email["domain"],
             )
-            print("MICROSOFT:", mr)
             if "error" in mr and mr["error"] == False and "url" in mr:
                 session["microsoft_state"] = mr["state"]
                 session["microsoft_nonce"] = mr["nonce"]
@@ -1849,7 +1856,10 @@ def return_sign_in(
     fail_message: str = None,
     force_email: bool = False,
 ):
-    session["force_email"] = force_email
+    if force_email or is_forced_email():
+        session["force_email"] = True
+
+    force_email = session.get("force_email", False)
 
     erm = get_remember_me_cookie_value()
 
@@ -1877,6 +1887,9 @@ def return_sign_in(
         "is_error": is_error,
         "fail_message": fail_message or "Email address wasn't recognised",
         "force_email": force_email,
+        "email_callback": session.get("email", {}).get("email", None)
+        if force_email
+        else None,
         "code_fail": code_fail,
         "title": code_type.title(),
         "form_url": "/sign-in",

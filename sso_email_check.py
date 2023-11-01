@@ -1,4 +1,6 @@
 import json
+import re
+import dns.resolver
 
 from sso_utils import env_var, to_list
 from email_helper import email_parts
@@ -6,6 +8,54 @@ from email_helper import email_parts
 ENVIRONMENT = env_var("ENVIRONMENT", "development")
 IS_PROD = ENVIRONMENT.lower().startswith("prod")
 DEBUG = not IS_PROD
+
+resolver = None
+resolver_set = False
+resolver_location = env_var("DNS_RESOLVER", "dns.google")
+
+unexpected_source_re = re.compile(
+    r"from \([\"'](?P<ip>[\[\]\:\.0-9a-fA-F]+)[\"'],\s*(?P<port>\d+)"
+)
+
+
+def get_resolver(depth: int = 0):
+    global resolver
+    global resolver_set
+    global resolver_location
+
+    if not resolver_set:
+        try:
+            resolver = dns.resolver.make_resolver_at(resolver_location)
+            resolver.resolve("digital.cabinet-office.gov.uk", "MX", lifetime=6)
+            resolver_set = True
+        except Exception as e:
+            if depth > 1:
+                raise e
+            if e and "kwargs" in dir(e):
+                for x in e.kwargs.get("errors", {}):
+                    if len(x) > 4 and isinstance(x[3], dns.query.UnexpectedSource):
+                        new_from = unexpected_source_re.search(str(x[3]))
+                        if new_from:
+                            resolver_location = new_from.group(1)
+                            resolver = get_resolver(depth=(depth + 1))
+                            break
+    return resolver
+
+
+def get_dns_records(domain_name: str, qtype: str) -> list:
+    res = []
+    try:
+        answers = get_resolver().resolve(domain_name, qtype)
+        for rr in answers:
+            if rr:
+                res.append(rr.to_text().strip('"'))
+    except Exception as e:
+        pass
+    return res
+
+
+def get_mx_records(domain_name: str) -> list:
+    return get_dns_records(domain_name, "MX")
 
 
 def valid_email(email_input, client: dict = {}, debug: bool = False) -> dict:
@@ -120,12 +170,33 @@ def valid_email(email_input, client: dict = {}, debug: bool = False) -> dict:
 
 
 def get_auth_type(email) -> str:
-    if email == "ollie.chalk@digital.cabinet-office.gov.uk":
-        return "email"
-
     if not IS_PROD:
-        if email.endswith("@ncsc.gov.uk"):
+        domain = email.split("@", 1)[1]
+        mx_records = get_mx_records(domain)
+        uses_ms = False
+        uses_g = False
+        for mx in mx_records:
+            mx = mx.strip(".")
+            if mx.endswith(".outlook.com"):
+                uses_ms = True
+                break
+            if mx.endswith(".google.com") or mx.endswith(".googlemail.com"):
+                uses_g = True
+                break
+
+        print(
+            "sso_email_check:get_auth_type:domain:",
+            domain,
+            "uses_ms:",
+            uses_ms,
+            "uses_g:",
+            uses_g,
+        )
+
+        if uses_ms:
             return "microsoft"
+        if uses_g:
+            return "google"
 
     if email.endswith("@digital.cabinet-office.gov.uk"):
         return "google"

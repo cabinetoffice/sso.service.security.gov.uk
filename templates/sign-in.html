@@ -37,7 +37,7 @@
       </p>
       {% endif %}
       <!-- aria-describedby="email-hint" -->
-      <input class="govuk-input {{ 'govuk-input--error' if is_error else '' }}" id="email" name="email" type="email" spellcheck="false" autocomplete="email" value="{{ email_remember_me if email_remember_me else '' }}">
+      <input class="govuk-input {{ 'govuk-input--error' if is_error else '' }}" id="email" name="email" type="email" spellcheck="false" autocomplete="email" value="{{ email_remember_me if email_remember_me else (email_callback if email_callback else '') }}">
     </div>
 
     <div class="govuk-form-group">
@@ -53,7 +53,13 @@
       By continuing you agree to your IP, email and browser details being recorded
     </div-->
 
+    <div id="divForceEmailNotice" class="govuk-inset-text{%- if is_error or not force_email %} hidden {%- endif %}">
+      It looks like you may be having issues signing in, so we'll email you a one-time code this time
+    </div>
+
+    <input type="hidden" id="detect_back" name="detect_back" value="0" >
     <input type="hidden" id="csrf_form" name="csrf_form" value="{{ csrf_form }}">
+    <input type="hidden" id="force_email" name="force_email" value="{{ force_email }}">
     <div class="govuk-button-group">
       <input type="submit" value="Continue" class="govuk-button" data-module="govuk-button"></input>
       {% if cancel_href %}

@@ -38,7 +38,7 @@
   <form action="{{ form_url }}" method="post">
     <div class="govuk-form-group {{ 'govuk-form-group--error' if code_fail else '' }}">
       <label class="govuk-label" for="code">
-        Check your {{ device }} for a one-time code
+        We've emailed {{ '<span class="dotted-underline">' + email_callback + '</span>' if email_callback else "" }} a one-time code
       </label>
       {% if code_fail %}
       <p id="code-error" class="govuk-error-message">

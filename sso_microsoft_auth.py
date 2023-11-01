@@ -56,7 +56,7 @@ class MicrosoftAuth:
         self.token_endpoint = None
         self.jwks_uri = None
 
-        self.scopes = ["openid", "email", "profile"]
+        self.scopes = ["openid", "email"]
 
         self.dev_mode = dev_mode
 
@@ -94,13 +94,6 @@ class MicrosoftAuth:
 
     def is_ready(self) -> bool:
         starts = f"http{'s://' if not self.dev_mode else ''}"
-        print("is_ready:starts:", starts)
-        print(
-            "is_ready:endpoints:",
-            self.auth_endpoint,
-            self.token_endpoint,
-            self.jwks_uri,
-        )
         return 3 == [
             starts
             for x in [self.auth_endpoint, self.token_endpoint, self.jwks_uri]

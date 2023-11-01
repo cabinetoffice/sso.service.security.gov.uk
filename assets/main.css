@@ -58,3 +58,8 @@ code {
 .hidden {
   display: none;
 }
+
+.dotted-underline {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
