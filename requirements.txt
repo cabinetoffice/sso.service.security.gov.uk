@@ -7,5 +7,5 @@ ItsDangerous==2.1.2
 notifications-python-client==8.1.0
 python-dotenv==1.0.0
 PyJWT==2.8.0
-cryptography==41.0.5 ; sys_platform == 'linux' and python_version >= '3.11' and platform_python_implementation == 'CPython' and platform_release == 'manylinux2014_x86_64'
+cryptography==42.0.1 ; sys_platform == 'linux' and python_version >= '3.11' and platform_python_implementation == 'CPython' and platform_release == 'manylinux2014_x86_64'
 dnspython==2.4.2
