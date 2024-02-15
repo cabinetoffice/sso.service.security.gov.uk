@@ -151,6 +151,7 @@ def get_available_scopes() -> list:
         "profile",
         "user_attribute:global:read",
         "user_attribute:global:write",
+        "enable_aws_email_tag",
     ]
 
 
@@ -212,6 +213,9 @@ def generate_id_token(
         payload["email"] = email
         payload["email_verified"] = True
         payload["preferred_username"] = email
+
+    if "enable_aws_email_tag" in scopes:
+        payload["https://aws.amazon.com/tags"] = {"principal_tags": {"Email": [email]}}
 
     if "profile" in scopes:
         dn = None
