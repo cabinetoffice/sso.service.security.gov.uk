@@ -1,0 +1,127 @@
+{% extends "_primary.html" %}
+
+{% block content %}
+<div class="govuk-breadcrumbs">
+  <ol class="govuk-breadcrumbs__list">
+    <li class="govuk-breadcrumbs__list-item">
+      <a class="govuk-breadcrumbs__link" href="/">Single Sign-On</a>
+    </li>
+    <li class="govuk-breadcrumbs__list-item" aria-current="page">View {{ client.get("name") }} configuration</li>
+  </ol>
+</div>
+
+<main class="govuk-main-wrapper govuk-body " id="main-content" role="main">
+  <h2 class="govuk-heading-l">View {{ client.get("name") }} configuration</h2>
+
+  {%- if manager_type and manager_type in ["owner", "manager", "viewer"] %}
+  <div>
+    <h3 class="govuk-heading-m">Client ID</h3>
+    <p>{{ client_id }}</p>
+
+    {%- if client.get("description", None) %}
+    <h3 class="govuk-heading-m">Client Description</h3>
+    <p>{{ client.get("description") }}</p>
+    {%- endif %}
+
+    {%- if client.get("owners", []) %}
+    <h3 class="govuk-heading-m">Client Owners</h3>
+    <div id="owners_hint" class="govuk-hint">
+      Owners can manage all aspects of this application, including resetting the client secret
+    </div>
+    <ul aria-describedby="owners_hint">
+      {%- for em in client.get("owners", []) | sort %}
+      <li>{{ em }}</li>
+      {%- endfor %}
+    </ul>
+    {%- endif %}
+
+    {%- if client.get("managers", []) %}
+    <h3 class="govuk-heading-m">Client Managers</h3>
+    <div id="managers_hint" class="govuk-hint">
+      Managers can manage this application's allowed/blocked list and some other settings
+    </div>
+    <ul aria-describedby="managers_hint">
+      {%- for em in client.get("managers", []) | sort %}
+      <li>{{ em }}</li>
+      {%- endfor %}
+    </ul>
+    {%- endif %}
+
+    {%- if client.get("viewers", []) %}
+    <h3 class="govuk-heading-m">Client Viewers</h3>
+    <div id="viewers_hint" class="govuk-hint">
+      Viewers can view some settings via this current page
+    </div>
+    <ul aria-describedby="viewers_hint">
+      {%- for em in client.get("viewers", []) | sort %}
+      <li>{{ em }}</li>
+      {%- endfor %}
+    </ul>
+    {%- endif %}
+
+    {%- if client.get("blocked_domains", []) %}
+    <h3 class="govuk-heading-m">Blocked domains</h3>
+    <div id="blocked_domains_hint" class="govuk-hint">
+      Blocked domains take precedence over any allowed domains or emails
+    </div>
+    <ul aria-describedby="blocked_domains_hint">
+      {%- for d in client.get("blocked_domains", []) | sort %}
+      <li>{{ d }}</li>
+      <li>*.{{ d }}</li>
+      {%- endfor %}
+    </ul>
+    {%- endif %}
+
+    {%- if client.get("blocked_emails", []) %}
+    <h3 class="govuk-heading-m">Blocked emails</h3>
+    <div id="blocked_emails_hint" class="govuk-hint">
+      Blocked emails take precedence over any allowed domains or emails
+    </div>
+    <ul aria-describedby="blocked_emails_hint">
+      {%- for em in client.get("blocked_emails", []) | sort %}
+      <li>{{ em }}</li>
+      {%- endfor %}
+    </ul>
+    {%- endif %}
+
+    {%- if client.get("allowed_emails", []) %}
+    <h3 class="govuk-heading-m">Allowed emails</h3>
+    <div id="allowed_emails_hint" class="govuk-hint">
+      The below emails can authenticate using this client. Note that the client may include additional authorisation steps that prevents user access.
+    </div>
+    <ul aria-describedby="allowed_emails_hint">
+      {%- for em in client.get("allowed_emails", []) | sort %}
+      <li>{{ em }}</li>
+      {%- endfor %}
+    </ul>
+    {%- endif %}
+
+    {%- if client.get("allowed_domains", []) %}
+    <h3 class="govuk-heading-m">Allowed domains</h3>
+    <div id="allowed_domains_hint" class="govuk-hint">
+      Users with email addresses ending in the below domains can authenticate using this client. Note that the client may include additional authorisation steps that prevents user access.
+    </div>
+    <ul aria-describedby="allowed_domains_hint">
+      {%- for d in client.get("allowed_domains", []) | sort %}
+      <li>{{ d }}</li>
+      <li>*.{{ d }}</li>
+      {%- endfor %}
+    </ul>
+    {%- endif %}
+    
+    <div>
+      <a href="/dashboard#{{ client_id }}" class="govuk-button govuk-button--secondary" data-module="govuk-button">
+        Return to dashboard
+      </a>
+      {%- if manager_type and manager_type in ["owner", "manager"] %}
+      &nbsp;
+      <a href="/manage?client_id={{ client_id }}" class="govuk-button govuk-button--secondary" data-module="govuk-button">
+        Manage
+      </a>
+      {%- endif %}
+    </div>
+  </div>
+  {%- endif %}
+
+</main>
+{% endblock %}

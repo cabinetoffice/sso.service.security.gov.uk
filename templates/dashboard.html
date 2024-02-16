@@ -42,12 +42,14 @@
           {%- if app["sign_in_url"] %}
             <a href="{{ app['sign_in_url'] }}" role="button" draggable="false" class="govuk-button" data-module="govuk-button">{{ app["button_text"] }}</a>
           {%- endif %}
-
-          {%- if app["sign_in_url"] and app["can_manage"] %}
-          &nbsp;
-          {%- endif %}
           
+          {%- if app["can_view"] %}
+            &nbsp;
+            <a href="/view?client_id={{ a }}" role="button" draggable="false" class="govuk-button govuk-button--secondary" data-module="govuk-button">View configuration</a>
+          {%- endif %}
+
           {%- if app["can_manage"] %}
+            &nbsp;
             <a href="/manage?client_id={{ a }}" role="button" draggable="false" class="govuk-button govuk-button--secondary" data-module="govuk-button">Manage</a>
           {%- endif %}
         </p>

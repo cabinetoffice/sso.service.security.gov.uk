@@ -1246,6 +1246,7 @@ def signout(country_missmatch: bool = False):
     return redirect(redirect_url)
 
 
+@app.route("/view", methods=["GET"])
 @app.route("/manage", methods=["GET", "POST"])
 @UserShouldBeSignedIn
 @SetBrowserCookie
@@ -1294,6 +1295,7 @@ def route_manage():
 
     owners = client.get("owners", [])
     managers = client.get("managers", [])
+    viewers = client.get("viewers", [])
 
     manager_type = None
 
@@ -1305,6 +1307,8 @@ def route_manage():
         manager_type = "owner"
     elif users_email and users_email in managers:
         manager_type = "manager"
+    elif users_email and users_email in viewers:
+        manager_type = "viewer"
 
     if not manager_type:
         jprint(
@@ -1316,6 +1320,19 @@ def route_manage():
             }
         )
         return redirect("/dashboard?error=management-no-access")
+
+    if "view" in request.path or manager_type == "viewer":
+        return renderTemplate(
+            "view.html",
+            {
+                "session": session,
+                "client_id": client_id,
+                "manager_type": manager_type,
+                "client": client,
+                "title": "View",
+                "nav_item": "view",
+            },
+        )
 
     client_json = None
     client_json_lines = 0
@@ -1347,9 +1364,10 @@ def route_manage():
                 else:
                     new_config["secret"] = client["secret"]
 
-                if manager_type == "manager":
+                if manager_type != "owner":
                     new_config["owners"] = client.get("owners", [])
                     new_config["managers"] = client.get("managers", [])
+                    new_config["viewers"] = client.get("viewers", [])
 
                 save_success = sso_oidc.save_client(
                     filename=client.get("_filename", None),
@@ -1409,6 +1427,20 @@ def dashboard():
                 else f"Open {name}"
             )
 
+            can_view = (
+                True
+                if (
+                    users_email
+                    in (
+                        client.get("owners", [])
+                        + client.get("managers", [])
+                        + client.get("viewers", [])
+                    )
+                    or users_email in SUPERUSERS
+                )
+                else False
+            )
+
             can_manage = (
                 True
                 if (
@@ -1435,6 +1467,7 @@ def dashboard():
                 "sign_in_url": sign_in_url,
                 "button_text": button_text,
                 "dashboard_display": dashboard_display,
+                "can_view": can_view,
                 "can_manage": can_manage,
             }
 
