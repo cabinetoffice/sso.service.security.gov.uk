@@ -1,0 +1,105 @@
+{% extends "_primary.html" %}
+
+{% block content %}
+<div class="govuk-breadcrumbs">
+  <ol class="govuk-breadcrumbs__list">
+    <li class="govuk-breadcrumbs__list-item">
+      <a class="govuk-breadcrumbs__link" href="/">Single Sign-On</a>
+    </li>
+    <li class="govuk-breadcrumbs__list-item" aria-current="page">Manage {{ client.get("name") }}</li>
+  </ol>
+</div>
+
+<main class="govuk-main-wrapper govuk-body " id="main-content" role="main">
+  <h2 class="govuk-heading-l">Manage {{ client.get("name") }}</h2>
+
+  {%- if saving %}
+  <div>
+    {%- if save_success %}
+    <div class="govuk-panel govuk-panel--confirmation">
+      <h2 class="govuk-panel__title">
+        Successfully saved changes
+      </h2>
+    </div>
+
+    {%- if new_secret %}
+    <div class="govuk-form-group">
+      <h3 class="govuk-label-wrapper">
+        <label class="govuk-label govuk-label--m" for="client_secret">
+          Client Secret
+        </label>
+      </h3>
+      <div id="event-name-hint" class="client_secret-hint">
+         You won't be able to see this secret again so please make a note securely.<br>
+         Only application owners can reset and get a new secret.
+      </div>
+      <input class="govuk-input" readonly="readonly" id="client_secret" name="client_secret" type="text" value="{{ new_secret }}" aria-describedby="client_secret-hint">
+    </div>
+    {%- endif %}
+
+    {%- else %}
+    <p>Something went wrong</p>
+    {%- endif %}
+
+    {%- if client_id %}
+    <a href="/manage?client_id={{ client_id }}" class="govuk-button govuk-button--secondary" data-module="govuk-button">
+      Edit {{ client.get("name", "") }}
+    </a>
+    &nbsp;
+    <a href="/dashboard#{{ client_id }}" class="govuk-button govuk-button--secondary" data-module="govuk-button">
+      Return to dashboard
+    </a>
+    {%- endif %}
+  </div>
+  {%- elif manager_type %}
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div>
+      <div class="govuk-form-group">
+        <h3 class="govuk-label-wrapper">
+          <label class="govuk-label govuk-label--m" for="client_id">
+            Client ID
+          </label>
+        </h3>
+        <input class="govuk-input" readonly="readonly" id="client_id" name="client_id" type="text" value="{{ client_id }}">
+      </div>
+
+      <div class="govuk-form-group">
+        <h3 class="govuk-label-wrapper">
+          <label class="govuk-label govuk-label--m" for="config">
+            Client Configuration
+          </label>
+        </h3>
+        <div id="event-name-hint" class="govuk-hint">
+          You can edit this as an application {{ manager_type }}. Note that managers cannot edit owners or managers, or reset the client secret.
+        </div>
+        <textarea class="govuk-textarea" id="config" name="config" rows="{{ client_json_lines }}">{{ client_json }}</textarea>
+      </div>
+    </div>
+
+    <div>
+      <button type="submit" class="govuk-button" data-module="govuk-button">
+        Validate and save
+      </button>
+      &nbsp;
+      <a href="/manage?client_id={{ client_id }}" class="govuk-button govuk-button--secondary" data-module="govuk-button">
+        Reset
+      </a>
+      &nbsp;
+      <a href="/dashboard#{{ client_id }}" class="govuk-button govuk-button--secondary" data-module="govuk-button">
+        Return to dashboard
+      </a>
+      {%- if manager_type == "owner" %}
+      &nbsp;
+      <button type="submit" name="reset_secret" value="reset_secret" class="govuk-button govuk-button--warning" data-module="govuk-button">
+        Save and reset secret
+      </button>
+      {%- endif %}
+    </div>
+  </form>
+  {%- else %}
+  <div><p>No access</p></div>
+  {%- endif %}
+
+</main>
+{% endblock %}

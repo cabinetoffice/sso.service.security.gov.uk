@@ -27,6 +27,36 @@ IS_PROD = "production" == ENVIRONMENT.lower()
 _individual_clients = {}
 
 
+def save_client(filename: str, client: dict, client_id: str) -> dict:
+    has_secret = False
+    saved = False
+
+    if not filename or not client or not client_id:
+        return False
+
+    try:
+        for client_item in list(client.keys()):
+            if client_item.startswith("_"):
+                client.pop(client_item, None)
+            if client_item == "secret":
+                has_secret = True
+
+        if has_secret:
+            saving_dict = {client_id: client}
+            as_json = json.dumps(saving_dict, default=str)
+            saved = write_file(
+                filename=filename, content=as_json, bucket_type="clients"
+            )
+
+    except Exception as e:
+        jprint({"function": "save_client", "filename": filename, "error": str(e)})
+
+    if saved:
+        reset_individual_clients()
+
+    return saved
+
+
 def get_clients() -> dict:
     res = {}
 
@@ -35,22 +65,12 @@ def get_clients() -> dict:
         fc = from_files[fn]
         if fc and fc.startswith("{"):
             try:
-                res.update(json.loads(fc))
+                jc = json.loads(fc)
+                for jcc in jc:
+                    jc[jcc]["_filename"] = fn
+                res.update(jc)
             except Exception as e:
                 jprint({"function": "get_clients", "file": fn, "error": str(e)})
-
-    from_env = env_var("OAUTH_CLIENTS_JSON_OBJECT")
-    if from_env and from_env.startswith("{"):
-        try:
-            res.update(json.loads(from_env))
-        except Exception as e:
-            jprint(
-                {
-                    "function": "get_clients",
-                    "env_var": "OAUTH_CLIENTS_JSON_OBJECT",
-                    "error": str(e),
-                }
-            )
 
     if not IS_PROD:
         jprint({"function": "get_clients", "clients": res})
@@ -62,25 +82,31 @@ def get_clients() -> dict:
     return res
 
 
+def reset_individual_clients():
+    global _individual_clients
+    _individual_clients = {}
+
+
 def get_client(client_id: str) -> dict:
+    global _individual_clients
     if client_id:
         if client_id not in _individual_clients:
             clients = get_clients()
             if client_id in clients:
                 _individual_clients[client_id] = clients[client_id]
-                _individual_clients[client_id]["ok"] = True
+                _individual_clients[client_id]["_ok"] = True
                 if "client_id" not in _individual_clients[client_id]:
                     _individual_clients[client_id]["client_id"] = client_id
 
         if client_id in _individual_clients:
             return _individual_clients[client_id]
 
-    return {"ok": False}
+    return {"_ok": False}
 
 
 def is_client(client_id: str) -> bool:
     client = get_client(client_id)
-    return "ok" in client and client["ok"] == True
+    return "_ok" in client and client["_ok"] == True
 
 
 def generate_google_auth_url(sub: str) -> str:

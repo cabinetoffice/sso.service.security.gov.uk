@@ -28,16 +28,28 @@
   {%- if allowed_apps %}
     {%- for a in allowed_apps %}
       {%- set app = allowed_apps[a] %}
-      {%- if app["name"] and app["sign_in_url"] and app["dashboard_display"] %}
+      {%- if app["name"] and ((app["sign_in_url"] and app["dashboard_display"]) or app["can_manage"]) %}
       <div>
-        <h3 class="govuk-heading-m">{{ app["name"] }}</h3>
+        <h3 class="govuk-heading-m" id="{{ a }}">
+          {{ app["name"] }}
+        </h3>
         {%- if app["description"] %}
         <p>
           {{ app["description"] }}
         </p>
         {%- endif %}
         <p>
-          <a href="{{ app['sign_in_url'] }}" role="button" draggable="false" class="govuk-button" data-module="govuk-button">{{ app["button_text"] }}</a>
+          {%- if app["sign_in_url"] %}
+            <a href="{{ app['sign_in_url'] }}" role="button" draggable="false" class="govuk-button" data-module="govuk-button">{{ app["button_text"] }}</a>
+          {%- endif %}
+
+          {%- if app["sign_in_url"] and app["can_manage"] %}
+          &nbsp;
+          {%- endif %}
+          
+          {%- if app["can_manage"] %}
+            <a href="/manage?client_id={{ a }}" role="button" draggable="false" class="govuk-button govuk-button--secondary" data-module="govuk-button">Manage</a>
+          {%- endif %}
         </p>
       </div>
       {%- endif %}

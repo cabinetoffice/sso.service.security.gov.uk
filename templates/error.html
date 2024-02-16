@@ -25,9 +25,9 @@
     {%- endif %}
 
     {%- if try_again_url and not try_again_url.startswith('/error') and not try_again_url == '/' %}
-      <a href="{{ try_again_url }}">Try again</a> or <a href="/">go to the SSO dashboard</a>.
+      <a class="govuk-link" href="{{ try_again_url }}">Try again</a> or <a class="govuk-link" href="/">go to the SSO dashboard</a>.
     {%- else %}
-      <a href="/">Go to the SSO dashboard</a>.
+      <a class="govuk-link" href="/">Go to the SSO dashboard</a>.
     {%- endif %}
     </p>
   </div>
