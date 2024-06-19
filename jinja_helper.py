@@ -84,7 +84,7 @@ def main_css_hash():
     return _main_css_hash
 
 
-def renderTemplate(filename: str, params: dict = {}, status_code: int = 200) -> str:
+def renderTemplate(filename: str, params: dict = {}, status_code: int = 200) -> tuple[str, int]:
     params.update({"url_prefix": env_var("URL_PREFIX", "http://localhost:5001")})
 
     pbe = env_var("PHASE_BANNER", "PRIVATE-ALPHA")
