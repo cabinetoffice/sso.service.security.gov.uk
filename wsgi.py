@@ -96,7 +96,7 @@ try:
 except Exception as e:
     jprint({"MicrosoftAuth": {"error": e, "in_use": False}})
 
-FLASK_SECRET_KEY = env_var("FLASK_SECRET_KEY")
+FLASK_SECRET_KEY = env_var("FLASK_SECRET_KEY", secrets.token_urlsafe(24))
 app = Flask(__name__)
 
 if IS_PROD:
@@ -1401,6 +1401,18 @@ def route_manage():
             "nav_item": "manage",
         },
     )
+
+
+@app.route("/new-client", methods=["GET", "POST"])
+# @UserShouldBeSignedIn
+@SetBrowserCookie
+@CheckCSRFSession
+def new_client():
+    if request.method == "GET":
+        return renderTemplate("new-client.html")
+    else:
+        print(request.data)
+        return "Posted"
 
 
 @app.route("/dashboard", methods=["GET"])
