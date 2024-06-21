@@ -1414,7 +1414,7 @@ def new_client():
         request_dict = request.form.to_dict()
         sso_oidc.save_client(
             filename=f"{request_dict['app_url']}_{uuid.uuid4().hex}.json",
-            client={"secret": client_secret, **request_dict},
+            client={"secret": client_secret, "dashboard_display": True, **request_dict},
             client_id=client_id
         )
         return redirect(f"/view?client_id={client_id}")
