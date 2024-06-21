@@ -1,0 +1,63 @@
+{% extends "_primary.html" %}
+
+{% block content %}
+<div class="govuk-breadcrumbs">
+  <ol class="govuk-breadcrumbs__list">
+    <li class="govuk-breadcrumbs__list-item">
+      <a class="govuk-breadcrumbs__link" href="/">Single Sign-On</a>
+    </li>
+    <li class="govuk-breadcrumbs__list-item" aria-current="page">Create new client</li>
+  </ol>
+</div>
+
+<main class="govuk-main-wrapper " id="main-content" role="main">
+    <form action="{{ form_url }}" method="post">
+<fieldset class="govuk-fieldset">
+  <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+    <h1 class="govuk-fieldset__heading">
+      Please provide details for the new client
+    </h1>
+  </legend>
+    <div class="govuk-form-group">
+        <label class="govuk-label" for="name">
+            The name of the app
+        </label>
+        <input class="govuk-input" id="name" name="name" type="text">
+    </div>
+    <div class="govuk-form-group">
+        <label class="govuk-label" for="description">
+            A brief description of the app
+        </label>
+        <textarea class="govuk-textarea" id="description" name="description" type="text"></textarea>
+    </div>
+  <div class="govuk-form-group">
+    <label class="govuk-label" for="app-url">
+      The usual URL for the app
+    </label>
+    <input class="govuk-input" id="app-url" name="app_url" type="text">
+  </div>
+  <div class="govuk-form-group">
+    <label class="govuk-label" for="redirect-urls">
+      Redirect url(s). If more than one, please separate them with commas
+    </label>
+    <input class="govuk-input" id="redirect-urls" name="redirect_urls" type="text">
+  </div>
+  <div class="govuk-form-group">
+    <label class="govuk-label" for="sign-in-url">
+      Sign-in URL for the new app
+    </label>
+    <input class="govuk-input govuk-!-width-two-thirds" id="sign-in-url" name="sign_in_url" type="text">
+  </div>
+  <div class="govuk-form-group">
+    <label class="govuk-label" for="owners">
+      Owner(s). On the next page, you'll be able to add more owners.
+    </label>
+    <input class="govuk-input govuk-input--width-10" id="owners" name="owners" type="text">
+  </div>
+</fieldset>
+        <div class="govuk-button-group">
+      <input type="submit" value="Continue" class="govuk-button" data-module="govuk-button">
+    </div>
+</form>
+</main>
+{% endblock %}

@@ -1,13 +1,11 @@
 import json
 import base64
 import time
-import hashlib
-import boto3
-import botocore
+import uuid
+
 import traceback
 import re
 import os
-import html
 import jwt_signing
 import sso_oidc
 import werkzeug
@@ -18,7 +16,6 @@ from flask import (
     Flask,
     jsonify,
     send_from_directory,
-    render_template,
     request,
     session,
     redirect,
@@ -96,7 +93,7 @@ try:
 except Exception as e:
     jprint({"MicrosoftAuth": {"error": e, "in_use": False}})
 
-FLASK_SECRET_KEY = env_var("FLASK_SECRET_KEY")
+FLASK_SECRET_KEY = env_var("FLASK_SECRET_KEY", secrets.token_urlsafe(24))
 app = Flask(__name__)
 
 if IS_PROD:
@@ -1401,6 +1398,25 @@ def route_manage():
             "nav_item": "manage",
         },
     )
+
+
+@app.route("/new-client", methods=["GET", "POST"])
+@UserShouldBeSignedIn
+@SetBrowserCookie
+@CheckCSRFSession
+def new_client():
+    if request.method == "GET":
+        return renderTemplate("new-client.html", {"form_url": "/new-client"})
+    else:
+        client_secret_dict = generate_client_auth_pair()
+        client_id = client_secret_dict.get("client_id")
+        client_secret = client_secret_dict.get("client_secret")
+        sso_oidc.save_client(
+            filename=uuid.uuid4().hex,
+            client={"secret": client_secret, **request.form.to_dict()},
+            client_id=client_id
+        )
+        return redirect(f"/view?client_id={client_id}")
 
 
 @app.route("/dashboard", methods=["GET"])

@@ -27,7 +27,7 @@ IS_PROD = "production" == ENVIRONMENT.lower()
 _individual_clients = {}
 
 
-def save_client(filename: str, client: dict, client_id: str) -> dict:
+def save_client(filename: str, client: dict, client_id: str) -> bool:
     has_secret = False
     saved = False
 

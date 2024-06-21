@@ -5,7 +5,7 @@ import re
 from sso_utils import random_string
 
 
-def generate_client_auth_pair():
+def generate_client_auth_pair() -> dict[str, str]:
     """
     Returns a valid client ID and secret
 
