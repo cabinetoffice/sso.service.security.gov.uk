@@ -1414,6 +1414,8 @@ def new_client():
         request_dict = request.form.to_dict()
         user_domain = request_dict.get("owner").split("@")[1]
         request_dict["owners"] = [request_dict.get("owner")]
+        redirect_urls = [url.strip() for url in request_dict.get("redirect_urls").split(",")]
+        request_dict["redirect_urls"] = redirect_urls
         sso_oidc.save_client(
             filename=f"{request_dict['app_url']}_{uuid.uuid4().hex}.json",
             client={"secret": client_secret, "allowed_domains": [user_domain], **request_dict},
