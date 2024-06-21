@@ -1412,9 +1412,10 @@ def new_client():
         client_id = client_secret_dict.get("client_id")
         client_secret = client_secret_dict.get("client_secret")
         request_dict = request.form.to_dict()
+        user_domain = request_dict.get("owner").split("@")[1]
         sso_oidc.save_client(
             filename=f"{request_dict['app_url']}_{uuid.uuid4().hex}.json",
-            client={"secret": client_secret, **request_dict},
+            client={"secret": client_secret, "allowed_domains": [user_domain], **request_dict},
             client_id=client_id
         )
         return redirect(f"/view?client_id={client_id}")

@@ -26,9 +26,7 @@
   <h2 class="govuk-heading-l">Applications</h2>
   <div>
   {%- if allowed_apps %}
-      <p>{{ allowed_apps }}</p>
     {%- for a in allowed_apps %}
-        <p>{{ a }}</p>
       {%- set app = allowed_apps[a] %}
       {%- if app["name"] and ((app["sign_in_url"] and app["dashboard_display"]) or app["can_manage"]) %}
       <div>
