@@ -6,6 +6,8 @@ import uuid
 import traceback
 import re
 import os
+import uuid
+
 import jwt_signing
 import sso_oidc
 import werkzeug
@@ -23,11 +25,9 @@ from flask import (
 )
 from apig_wsgi import make_lambda_handler
 from notifications_python_client.notifications import NotificationsAPIClient
-from urllib.parse import parse_qs, unquote
 from functools import wraps
 
 from jinja_helper import renderTemplate
-from sso_data_access import read_file, write_file
 from sso_utils import random_string, env_var, sanitise_string, jprint, set_redacted
 from sso_email_check import valid_email
 from email_helper import email_parts
@@ -1411,9 +1411,10 @@ def new_client():
         client_secret_dict = generate_client_auth_pair()
         client_id = client_secret_dict.get("client_id")
         client_secret = client_secret_dict.get("client_secret")
+        request_dict = request.form.to_dict()
         sso_oidc.save_client(
-            filename=uuid.uuid4().hex,
-            client={"secret": client_secret, **request.form.to_dict()},
+            filename=f"{request_dict['app_url']}_{uuid.uuid4().hex}.json",
+            client={"secret": client_secret, **request_dict},
             client_id=client_id
         )
         return redirect(f"/view?client_id={client_id}")
