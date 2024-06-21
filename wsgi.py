@@ -1413,6 +1413,7 @@ def new_client():
         client_secret = client_secret_dict.get("client_secret")
         request_dict = request.form.to_dict()
         user_domain = request_dict.get("owner").split("@")[1]
+        request_dict["owners"] = [request_dict.get("owner")]
         sso_oidc.save_client(
             filename=f"{request_dict['app_url']}_{uuid.uuid4().hex}.json",
             client={"secret": client_secret, "allowed_domains": [user_domain], **request_dict},
