@@ -75,6 +75,13 @@ def get_clients() -> dict:
     if not IS_PROD:
         jprint({"function": "get_clients", "clients": res})
 
+    res = dict(
+        sorted(
+            res.items(),
+            key=lambda item: item[1].get("name", ""),
+        )
+    )
+
     for c in res:
         if "client_id" not in res[c]:
             res[c]["client_id"] = c
