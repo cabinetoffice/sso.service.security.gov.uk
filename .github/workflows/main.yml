@@ -35,7 +35,7 @@ jobs:
       name: ${{ matrix.environment }}
     steps:
       - name: Checkout this repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: main
           path: main
