@@ -3,7 +3,7 @@
     "chai": "^4.3.4",
     "minify": "^9.1.0",
     "mocha": "^10.1.0",
-    "replace-in-file": "^6.3.5"
+    "replace-in-file": "^8.0.1"
   },
   "scripts": {
     "test": "npm run add_key && mocha --reporter spec 'test_*.js'",
