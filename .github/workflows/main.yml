@@ -46,7 +46,7 @@ jobs:
           echo "terraform_version=${TV}"
           echo "terraform_version=${TV}" >> $GITHUB_OUTPUT
 
-      - uses: hashicorp/setup-terraform@v2
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.terraform_version }}
 
